@@ -48,7 +48,7 @@ dependencies {
 afterEvaluate {
     publishing {
         publications {
-            register("release", MavenPublication::class) {
+            create<MavenPublication>("maven") {
                 from(components.getByName("release"))
 
                 groupId = "eu.anifantakis.lib"
