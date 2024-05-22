@@ -42,10 +42,37 @@ repositories {
 ```
 
 ## Usage
+
+#### Provide SecurePersist library using Hilt
+> ```kotlin
+> import android.content.Context
+> import dagger.Module
+> import dagger.Provides
+> import dagger.hilt.InstallIn
+> import dagger.hilt.android.qualifiers.ApplicationContext
+> import dagger.hilt.components.SingletonComponent
+> import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
+> import eu.anifantakis.lib.securepersist.PersistManager
+> import javax.inject.Singleton
+> 
+> @Module
+> @InstallIn(SingletonComponent::class)
+> object EncryptionModule {
+> 
+>     @Provides
+>     @Singleton
+>     fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager = PersistManager(context, "myKeyAlias")
+> 
+>     @Provides
+>     @Singleton
+>     fun provideEncryptedManager(): EncryptionManager = EncryptionManager("myKeyAlias")
+> }
+> ```
+
 ### PersistManager
 `PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both SharedPreferences and DataStore leverages the **EncryptionManager's** cryptographic algorithms.
 
-#### Initialization
+#### Initialization directly without DI
 > ```kotlin
 > // create a PersistManager instance (optionally give keyAlias)
 > val persistManager = PersistManager(context, "your_key_alias")
@@ -95,10 +122,10 @@ Unlike SharedPreferences, DataStore does not natively support encryption. Secure
 
 #### DataStore Example
 > ```kotlin
-> // Save a preference
+> // Save a non-encrypted preference
 > persistManager.putDataStorePreference("key2", 123)
 > 
-> // Retrieve a preference
+> // Retrieve a non-encrypted preference
 > val number: Int = persistManager.getDataStorePreference("key2", 0)
 > 
 > // Encrypt and save a preference
@@ -116,12 +143,12 @@ Unlike SharedPreferences, DataStore does not natively support encryption. Secure
 
 #### Encryption Details
 * **Algorithm:** AES (Advanced Encryption Standard)
-* **Mode:** CBC (Cipher Block Chaining)
-* **Padding:** PKCS7
+* **Mode:** GCM (Galois/Counter Mode)
+* **Padding:** No Padding (GCM handles it internally)
 * **Key Management:** Managed by Android KeyStore
 * **Key Strength:** 256-bit keys for strong encryption
 
-AES is a symmetric encryption algorithm widely recognized for its security and performance. The combination of AES, CBC mode, and PKCS7 padding ensures that your data is encrypted securely and efficiently. Using the Android KeyStore for key management adds an additional layer of security by storing keys in a secure, hardware-backed environment.
+AES in GCM mode is an authenticated encryption algorithm that provides both data confidentiality and integrity. This makes it highly secure and suitable for sensitive data. Using the Android KeyStore for key management adds an extra layer of security by storing keys in a secure, hardware-backed environment.
 
 #### Encrypting and Decrypting Raw Data
 
@@ -142,4 +169,8 @@ AES is a symmetric encryption algorithm widely recognized for its security and p
 > val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValue")
 > ```
 
+## Contributing
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
 
+## License
+This project is licensed under the MIT License
