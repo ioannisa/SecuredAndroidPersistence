@@ -9,6 +9,7 @@ import java.security.cert.Certificate
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.spec.IvParameterSpec
 
 /**
  * EncryptionManager class handles encryption and decryption using the Android KeyStore system.
@@ -79,7 +80,7 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
         val encryptedBytes = ByteArray(encryptedData.size - iv.size)
         System.arraycopy(encryptedData, iv.size, encryptedBytes, 0, encryptedBytes.size)
 
-        val ivSpec = javax.crypto.spec.IvParameterSpec(iv)
+        val ivSpec = IvParameterSpec(iv)
         cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
         return String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8)
     }
@@ -92,7 +93,8 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
      */
     override fun <T> encryptValue(value: T): String {
         val stringValue = value.toString()
-        return Base64.encodeToString(encryptData(stringValue), Base64.DEFAULT)
+        val encryptedData = encryptData(stringValue)
+        return Base64.encodeToString(encryptedData, Base64.DEFAULT)
     }
 
     /**
@@ -104,8 +106,9 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
      */
     override fun <T> decryptValue(encryptedValue: String, defaultValue: T): T {
         return try {
-            val decryptedString = decryptData(Base64.decode(encryptedValue, Base64.DEFAULT))
-            return when (defaultValue) {
+            val encryptedData = Base64.decode(encryptedValue, Base64.DEFAULT)
+            val decryptedString = decryptData(encryptedData)
+            when (defaultValue) {
                 is Boolean -> decryptedString.toBoolean() as T
                 is Int -> decryptedString.toInt() as T
                 is Float -> decryptedString.toFloat() as T
