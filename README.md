@@ -31,6 +31,10 @@ rootProject.name = "My App Name"
 include(":app")
 include(":secure-persist") // <-- add this line so android knows this folder is a module
 ```
+3. At your App-Module's build.gradle file dependencies, add the module that your project contains
+```kotlin
+implementation(project(":secure-persist"))
+```
 
 ### Install as a Jitpack library to your dependencies
 
@@ -41,7 +45,7 @@ include(":secure-persist") // <-- add this line so android knows this folder is 
 implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.5")
 ```
 
-2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at `app:build.gradle` for older Android projects) in order for this library to be able to download
+2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
 ```kotlin
 repositories {
     google()
