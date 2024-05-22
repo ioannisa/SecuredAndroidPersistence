@@ -31,7 +31,7 @@ rootProject.name = "My App Name"
 include(":app")
 include(":secure-persist") // <-- add this line so android knows this folder is a module
 ```
-3. At your App-Module's build.gradle file dependencies, add the module that your project contains
+3. At your App-Module's `build.gradle` file dependencies, add the module that your project contains
 ```kotlin
 implementation(project(":secure-persist"))
 ```
