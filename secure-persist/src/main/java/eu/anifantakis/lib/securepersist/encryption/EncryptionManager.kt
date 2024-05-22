@@ -9,7 +9,7 @@ import java.security.cert.Certificate
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.GCMParameterSpec
 
 /**
  * EncryptionManager class handles encryption and decryption using the Android KeyStore system.
@@ -20,8 +20,9 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
 
     companion object {
         private const val KEYSTORE_TYPE = "AndroidKeyStore"
-        private const val CIPHER_TRANSFORMATION = "AES/CBC/PKCS7Padding"
-        private const val IV_SIZE = 16 // IV size for AES is 16 bytes
+        private const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
+        private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
     }
 
     private val keyStore: KeyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply {
@@ -39,9 +40,9 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
     private fun generateSecretKey(alias: String) {
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_TYPE)
         val keyGenParameterSpec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-            .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-            .setAttestationChallenge("randomChallenge".toByteArray())
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256) // Using 256-bit key for strong encryption
             .build()
         keyGenerator.init(keyGenParameterSpec)
         keyGenerator.generateKey()
@@ -80,7 +81,7 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
         val encryptedBytes = ByteArray(encryptedData.size - iv.size)
         System.arraycopy(encryptedData, iv.size, encryptedBytes, 0, encryptedBytes.size)
 
-        val ivSpec = IvParameterSpec(iv)
+        val ivSpec = GCMParameterSpec(TAG_SIZE, iv)
         cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
         return String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8)
     }
