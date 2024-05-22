@@ -34,6 +34,8 @@ include(":secure-persist") // <-- add this line so android knows this folder is 
 
 ### Install as a Jitpack library to your dependencies
 
+[![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/SecuredAndroidPersistence)
+
 1. Add this to your dependencies
 ```kotlin
 implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.5")
@@ -110,7 +112,7 @@ In this first example you can set the key of the sharedPreference manually
 ```kotlin
 // create
 var secureString by persistManager.preference("secureString", "default")
- 
+
 secureString = "newSecureValue"
 val storedValue = secureString
 ```
