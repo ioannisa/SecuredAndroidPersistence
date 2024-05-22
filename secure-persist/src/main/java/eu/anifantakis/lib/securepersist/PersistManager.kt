@@ -1,13 +1,15 @@
 package eu.anifantakis.lib.securepersist
 
 import android.content.Context
+import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
+import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import eu.anifantakis.lib.securepersist.internal.DataStoreManager
 import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
 import kotlin.reflect.KProperty
 
 class PersistManager(context: Context, keyAlias: String) {
 
-    private val encryptionManager = EncryptionManager(keyAlias)
+    private val encryptionManager: IEncryptionManager = EncryptionManager(keyAlias)
     private val sharedPreferencesManager = SharedPreferencesManager(context)
     private val dataStoreManager = DataStoreManager(context, encryptionManager)
 
@@ -28,6 +30,7 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
+     * @return The decrypted value.
      */
     fun <T> decryptSharedPreference(key: String, defaultValue: T): T {
         return sharedPreferencesManager.get(key, defaultValue)
@@ -49,6 +52,14 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to store the value under.
      * @param value The value to store.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * encryptedStore.putDataStorePreference("key1", "exampleString")
+     * encryptedStore.putDataStorePreference("key2", 123)
+     * encryptedStore.putDataStorePreference("key3", true)
      */
     suspend fun <T> putDataStorePreference(key: String, value: T) {
         dataStoreManager.put(key, value)
@@ -59,6 +70,15 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
+     * @return The retrieved value.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * val myStr: String = encryptedStore.getDataStorePreference("key1", "")
+     * val myInt: Int = encryptedStore.getDataStorePreference("key2", 0)
+     * val myBool: Boolean = encryptedStore.getDataStorePreference("key3", false)
      */
     suspend fun <T : Any> getDataStorePreference(key: String, defaultValue: T): T {
         return dataStoreManager.get(key, defaultValue)
@@ -69,6 +89,14 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to store the value under.
      * @param value The value to store.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * encryptedStore.encryptDataStorePreference(eStringKey, "encryptedString")
+     * encryptedStore.encryptDataStorePreference(eIntKey, 567)
+     * encryptedStore.encryptDataStorePreference(eBooleanKey, true)
      */
     suspend fun <T> encryptDataStorePreference(key: String, value: T) {
         dataStoreManager.putEncrypted(key, value)
@@ -79,6 +107,15 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
+     * @return The decrypted value.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * val myStr: String = encryptedStore.decryptDataStorePreference("key1", "")
+     * val myInt: Int = encryptedStore.decryptDataStorePreference("key2", 0)
+     * val myBool: Boolean = encryptedStore.decryptDataStorePreference("key3", false)
      */
     suspend fun <T> decryptDataStorePreference(key: String, defaultValue: T): T {
         return dataStoreManager.getEncrypted(key, defaultValue)
@@ -88,6 +125,11 @@ class PersistManager(context: Context, keyAlias: String) {
      * Deletes a value from DataStore.
      *
      * @param key The key to delete the value under.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     * encryptedStore.deleteDataStorePreference("key1")
      */
     suspend fun deleteDataStorePreference(key: String) {
         dataStoreManager.delete(key)
@@ -95,6 +137,9 @@ class PersistManager(context: Context, keyAlias: String) {
 
     // Wrapper for the preference delegate
 
+    /**
+     * Class to handle encrypted preferences using property delegation.
+     */
     class EncryptedPreference<T>(
         private val persist: PersistManager,
         private val defaultValue: T,
@@ -112,9 +157,20 @@ class PersistManager(context: Context, keyAlias: String) {
     }
 
     /**
-     * Uses Delegation to set and get encrypted SharedPreferences.  Key to the preference is the property name.
+     * Uses Delegation to set and get encrypted SharedPreferences. Key to the preference is the property name.
      *
      * @param defaultValue The default value to return if the key does not exist.
+     * @return An EncryptedPreference instance.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * var myStr by encryptedStore.preference("delegationString1")
+     * var myInt by encryptedStore.preference(11)
+     * var myBool by encryptedStore.preference(true)
+     *
+     * above the key will be same as the variable name
      */
     fun <T> preference(defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue)
 
@@ -123,6 +179,17 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to store the value under.
      * @param defaultValue The default value to return if the key does not exist.
+     * @return An EncryptedPreference instance.
+     *
+     * Example usage:
+     *
+     * val encryptedStore = PersistManager(context)
+     *
+     * var myStr by encryptedStore.preference("myStr", "delegationString1")
+     * var myInt by encryptedStore.preference("myInt"", 11)
+     * var myBool by encryptedStore.preference("myBool"", true)
+     *
+     * above the key is irrelevant from the variable name
      */
     fun <T> preference(key: String, defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue, key)
 }

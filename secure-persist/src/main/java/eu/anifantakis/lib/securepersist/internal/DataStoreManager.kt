@@ -9,14 +9,21 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import eu.anifantakis.lib.securepersist.EncryptionManager
+import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-internal class DataStoreManager(private val context: Context, private val encryptionManager: EncryptionManager) {
+internal class DataStoreManager(private val context: Context, private val encryptionManager: IEncryptionManager) {
 
+    // Create a DataStore instance
     private val Context.dataStore by preferencesDataStore("encrypted_datastore")
 
+    /**
+     * Stores a value in DataStore.
+     *
+     * @param key The key to store the value under.
+     * @param value The value to store.
+     */
     @Suppress("UNCHECKED_CAST")
     suspend fun <T> put(key: String, value: T) {
         val preferencesKey: Preferences.Key<T> = when (value) {
@@ -33,6 +40,13 @@ internal class DataStoreManager(private val context: Context, private val encryp
         }
     }
 
+    /**
+     * Retrieves a value from DataStore.
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return The retrieved value.
+     */
     @Suppress("UNCHECKED_CAST")
     suspend fun <T : Any> get(key: String, defaultValue: T): T {
         val preferencesKey: Preferences.Key<*> = when (defaultValue) {
@@ -58,6 +72,12 @@ internal class DataStoreManager(private val context: Context, private val encryp
         return preferences as T
     }
 
+    /**
+     * Encrypts and stores a value in DataStore.
+     *
+     * @param key The key to store the value under.
+     * @param value The value to store.
+     */
     suspend fun <T> putEncrypted(key: String, value: T) {
         val dataKey = stringPreferencesKey(key)
         val encryptedValue = encryptionManager.encryptValue(value)
@@ -66,6 +86,13 @@ internal class DataStoreManager(private val context: Context, private val encryp
         }
     }
 
+    /**
+     * Retrieves and decrypts a value from DataStore.
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return The decrypted value.
+     */
     suspend fun <T> getEncrypted(key: String, defaultValue: T): T {
         val dataKey = stringPreferencesKey(key)
         val encryptedValue = context.dataStore.data.map { preferences ->
@@ -74,6 +101,11 @@ internal class DataStoreManager(private val context: Context, private val encryp
         return encryptionManager.decryptValue(encryptedValue, defaultValue)
     }
 
+    /**
+     * Deletes a value from DataStore.
+     *
+     * @param key The key to delete the value under.
+     */
     suspend fun delete(key: String) {
         val dataKey = stringPreferencesKey(key)
         context.dataStore.edit { preferences ->

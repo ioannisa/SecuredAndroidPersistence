@@ -12,10 +12,12 @@ internal class SharedPreferencesManager(context: Context) {
     private val sharedPreferences: SharedPreferences
 
     init {
+        // Create or retrieve the MasterKey for encryption
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
 
+        // Initialize EncryptedSharedPreferences
         sharedPreferences = EncryptedSharedPreferences.create(
             context,
             "encrypted_prefs_filename",
@@ -25,6 +27,12 @@ internal class SharedPreferencesManager(context: Context) {
         )
     }
 
+    /**
+     * Stores a value in EncryptedSharedPreferences.
+     *
+     * @param key The key to store the value under.
+     * @param value The value to store.
+     */
     fun <T> put(key: String, value: T) {
         sharedPreferences.edit {
             when (value) {
@@ -33,11 +41,18 @@ internal class SharedPreferencesManager(context: Context) {
                 is Float -> putFloat(key, value).apply()
                 is Long -> putLong(key, value).apply()
                 is String -> putString(key, value).apply()
-                else -> throw UnsupportedOperationException()
+                else -> throw UnsupportedOperationException("Unsupported type")
             }
         }
     }
 
+    /**
+     * Retrieves a value from EncryptedSharedPreferences.
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return The retrieved value.
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String, defaultValue: T): T {
         return when (defaultValue) {
@@ -50,12 +65,20 @@ internal class SharedPreferencesManager(context: Context) {
         }
     }
 
+    /**
+     * Deletes a value from EncryptedSharedPreferences.
+     *
+     * @param key The key to delete the value under.
+     */
     fun delete(key: String) {
         sharedPreferences.edit {
             remove(key)
         }
     }
 
+    /**
+     * Class to handle encrypted preferences using property delegation.
+     */
     internal class EncryptedPreference<T>(
         private val sharedPreferencesManager: SharedPreferencesManager,
         private val defaultValue: T,
@@ -72,7 +95,20 @@ internal class SharedPreferencesManager(context: Context) {
         }
     }
 
+    /**
+     * Creates an EncryptedPreference with the property name as the key.
+     *
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return An EncryptedPreference instance.
+     */
     fun <T> preference(defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue)
 
+    /**
+     * Creates an EncryptedPreference with a specific key.
+     *
+     * @param key The key to store the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return An EncryptedPreference instance.
+     */
     fun <T> preference(key: String, defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue, key)
 }
