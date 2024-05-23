@@ -17,10 +17,9 @@ import javax.crypto.spec.SecretKeySpec
  *
  * @param keyAlias The alias for the encryption key in the KeyStore.
  */
-class EncryptionManager (
-    private var keyAlias: String? = "keyAlias"
-) : IEncryptionManager {
+class EncryptionManager : IEncryptionManager {
 
+    private var keyAlias: String? = "keyAlias"
     private var externalKey: SecretKey? = null
 
     companion object {
@@ -36,7 +35,9 @@ class EncryptionManager (
          * @return The EncryptionManager instance.
          */
         fun withKeyStore(keyAlias: String): EncryptionManager {
-            return EncryptionManager(keyAlias)
+            val manager = EncryptionManager()
+            manager.keyAlias = keyAlias
+            return manager
         }
 
         /**
@@ -46,7 +47,7 @@ class EncryptionManager (
          * @return The EncryptionManager instance.
          */
         fun withExternalKey(externalKey: SecretKey): EncryptionManager {
-            val manager = EncryptionManager(null)
+            val manager = EncryptionManager()
             manager.setExternalKey(externalKey)
             return manager
         }
@@ -113,11 +114,12 @@ class EncryptionManager (
      * Encrypts the given data using the secret key.
      *
      * @param data The plaintext data to encrypt.
+     * @param withKey The secret key to use for encryption. If null, the default key is used.
      * @return The encrypted data as a byte array.
      */
-    override fun encryptData(data: String): ByteArray {
+    override fun encryptData(data: String, withKey: SecretKey?): ByteArray {
         val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-        val secretKey = getKey()
+        val secretKey = withKey ?: getKey()
         cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         val iv = cipher.iv
         val encryptedData = cipher.doFinal(data.toByteArray(StandardCharsets.UTF_8))
@@ -130,11 +132,12 @@ class EncryptionManager (
      * Decrypts the given encrypted data using the secret key.
      *
      * @param encryptedData The encrypted data as a byte array.
+     * @param withKey The secret key to use for decryption. If null, the default key is used.
      * @return The decrypted plaintext data as a string.
      */
-    override fun decryptData(encryptedData: ByteArray): String {
+    override fun decryptData(encryptedData: ByteArray, withKey: SecretKey?): String {
         val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-        val secretKey = getKey()
+        val secretKey = withKey ?: getKey()
 
         val iv = ByteArray(IV_SIZE)
         System.arraycopy(encryptedData, 0, iv, 0, iv.size)
@@ -151,11 +154,12 @@ class EncryptionManager (
      * Encrypts a value and encodes it to a Base64 string.
      *
      * @param value The value to encrypt.
+     * @param withKey The secret key to use for encryption. If null, the default key is used.
      * @return The encrypted value as a Base64 string.
      */
-    override fun <T> encryptValue(value: T): String {
+    override fun <T> encryptValue(value: T, withKey: SecretKey?): String {
         val stringValue = value.toString()
-        val encryptedData = encryptData(stringValue)
+        val encryptedData = encryptData(stringValue, withKey)
         return Base64.encodeToString(encryptedData, Base64.DEFAULT)
     }
 
@@ -164,9 +168,10 @@ class EncryptionManager (
      *
      * @param encryptedValue The encrypted value as a Base64 string.
      * @param defaultValue The default value to return if decryption fails.
+     * @param withKey The secret key to use for decryption. If null, the default key is used.
      * @return The decrypted value.
      */
-    override fun <T> decryptValue(encryptedValue: String, defaultValue: T): T {
+    override fun <T> decryptValue(encryptedValue: String, defaultValue: T, withKey: SecretKey?): T {
         return try {
             val encryptedData = Base64.decode(encryptedValue, Base64.DEFAULT)
             val decryptedString = decryptData(encryptedData)

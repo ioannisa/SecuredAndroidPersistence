@@ -42,7 +42,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.8")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.9")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -82,8 +82,10 @@ object EncryptionModule {
 
     @Provides
     @Singleton
-    fun provideEncryptedManager(): EncryptionManager = 
-        EncryptionManager("myKeyAlias")
+    fun provideEncryptedManager(): EncryptionManager =
+        EncryptionManager
+            .withKeyStore("myKeyAlias")
+            .withExternalKey(EncryptionManager.generateExternalKey()) // <-- optional
 }
 ```
 
@@ -223,27 +225,56 @@ val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValu
 ```
 
 #### Encrypting and Decrypting Raw Data with an External Key
+
+One important feature is the ability generate an external key, which you can then pass to the library.
+
+By doing so you can safe-keep that key at some server in order to be able to make use of it when needed in the future.
+
 ```kotlin
 // Generate an external key
 val externalKey = EncryptionManager.generateExternalKey()
 
 // Create an EncryptionManager instance with the external key
-val encryptionManager = EncryptionManager.withExternalKey(externalKey)
-
-// Encrypt data
-val encryptedData = encryptionManager.encryptData("plainText")
-
-// Decrypt data
-val decryptedData = encryptionManager.decryptData(encryptedData)
-val plainText = String(decryptedData, Charsets.UTF_8)
-
-// Encrypt a value and encode it to a Base64 string
-val encryptedValue = encryptionManager.encryptValue("valueToEncrypt")
-
-// Decrypt a Base64 encoded string and return the original value
-val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+val encryptionManager = EncryptionManager
+    .withKeyStore("myKeyAlias")
+    .withExternalKey(externalKey)
 ```
 
+Also you can supply that key at runtime
+```kotlin
+// Generate an external key
+val externalKey = EncryptionManager.generateExternalKey()
+
+// Create an EncryptionManager instance
+val encryptionManager = EncryptionManager
+    .withKeyStore("myKeyAlias")
+
+// now that will replace the default key
+encryptionManager.setExternalKey(externalKey)
+```
+
+You can supply an external also only for a specific entryption/decryption, while leaving the default key for everything else
+```kotlin
+// Create an EncryptionManager instance
+val encryptionManager = EncryptionManager
+    .withKeyStore("myKeyAlias")
+
+// Generate an external key
+val externalKey = EncryptionManager.generateExternalKey()
+
+// we will now use that key only for the specified encryptions/decryptions
+
+// Encrypt a value and encode it to a Base64 string with custom key
+val encryptedValue1 = encryptionManager.encryptValue("valueToEncrypt", withKey = externalKey)
+// Encrypt a value and encode it to a Base64 string with default key
+val encryptedValue2 = encryptionManager.encryptValue("valueToEncrypt")
+
+// Decrypt a Base64 encoded string and return the original value with custom key
+val decryptedValue1 = encryptionManager.decryptValue(encryptedValue, "defaultValue", withKey = externalKey)
+// Decrypt a Base64 encoded string and return the original value with default key
+val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+
+```
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
