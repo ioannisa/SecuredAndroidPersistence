@@ -25,7 +25,7 @@ class EncryptionManagerTest {
 
     @Test
     fun testExternalKeyEncryptionDecryption() {
-        val encryptionManager = EncryptionManager.withExternalKey(EncryptionManager().generateExternalKey())
+        val encryptionManager = EncryptionManager.withExternalKey(EncryptionManager.generateExternalKey())
 
         val originalText = "Hello, Secure World!"
         val encryptedData = encryptionManager.encryptData(originalText)
@@ -47,7 +47,7 @@ class EncryptionManagerTest {
         assertEquals(originalText, decryptedText)
 
         // Switch to an external key
-        val externalKey = encryptionManager.generateExternalKey()
+        val externalKey = EncryptionManager.generateExternalKey()
         encryptionManager.setExternalKey(externalKey)
 
         encryptedData = encryptionManager.encryptData(originalText)
@@ -70,7 +70,7 @@ class EncryptionManagerTest {
 
     @Test
     fun testExternalKeyBase64EncodedEncryptionDecryption() {
-        val encryptionManager = EncryptionManager.withExternalKey(EncryptionManager().generateExternalKey())
+        val encryptionManager = EncryptionManager.withExternalKey(EncryptionManager.generateExternalKey())
 
         val originalValue = "Hello, Secure World!"
         val encryptedValue = encryptionManager.encryptValue(originalValue)

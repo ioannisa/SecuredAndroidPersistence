@@ -51,11 +51,4 @@ interface IEncryptionManager {
      * @param secretKey The external secret key to be used.
      */
     fun setExternalKey(secretKey: SecretKey)
-
-    /**
-     * Generates a new external secret key.
-     *
-     * @return The generated secret key.
-     */
-    fun generateExternalKey(): SecretKey
 }

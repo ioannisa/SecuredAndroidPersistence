@@ -10,7 +10,6 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 /**
  * EncryptionManager class handles encryption and decryption using the Android KeyStore system or an external key.
@@ -31,14 +30,37 @@ class EncryptionManager (
         private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
         private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
 
+        /**
+         * Creates an EncryptionManager instance using the Android KeyStore.
+         *
+         * @param keyAlias The alias for the encryption key in the KeyStore.
+         * @return An instance of EncryptionManager configured to use the Android KeyStore.
+         */
         fun withKeyStore(keyAlias: String): EncryptionManager {
             return EncryptionManager(keyAlias)
         }
 
+        /**
+         * Creates an EncryptionManager instance using an external secret key.
+         *
+         * @param externalKey The external secret key for encryption and decryption.
+         * @return An instance of EncryptionManager configured to use the external secret key.
+         */
         fun withExternalKey(externalKey: SecretKey): EncryptionManager {
             val manager = EncryptionManager(null)
             manager.setExternalKey(externalKey)
             return manager
+        }
+
+        /**
+         * Generates a new external secret key.
+         *
+         * @return The generated secret key.
+         */
+        fun generateExternalKey(): SecretKey {
+            val keyGenerator = KeyGenerator.getInstance("AES")
+            keyGenerator.init(256)
+            return keyGenerator.generateKey()
         }
     }
 
@@ -75,17 +97,6 @@ class EncryptionManager (
     override fun setExternalKey(secretKey: SecretKey) {
         externalKey = secretKey
         keyAlias = null
-    }
-
-    /**
-     * Generates a new external secret key.
-     *
-     * @return The generated secret key.
-     */
-    override fun generateExternalKey(): SecretKey {
-        val keyGenerator = KeyGenerator.getInstance("AES")
-        keyGenerator.init(256)
-        return keyGenerator.generateKey()
     }
 
     /**
