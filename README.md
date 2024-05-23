@@ -42,7 +42,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.5")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.8")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -56,7 +56,10 @@ repositories {
 
 ## Usage
 
-#### Provide SecurePersist library using Hilt
+#### Provide PersistManager and EncryptionManager using Hilt
+
+Do it quickly, do it with hilt
+
 ```kotlin
 import android.content.Context
 import dagger.Module
@@ -74,21 +77,29 @@ object EncryptionModule {
 
     @Provides
     @Singleton
-    fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager = PersistManager(context, "myKeyAlias")
+    fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager = 
+        PersistManager(context, "myKeyAlias")
 
     @Provides
     @Singleton
-    fun provideEncryptedManager(): EncryptionManager = EncryptionManager("myKeyAlias")
+    fun provideEncryptedManager(): EncryptionManager = 
+        EncryptionManager("myKeyAlias")
 }
 ```
 
 ### PersistManager
 `PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both SharedPreferences and DataStore leverages the **EncryptionManager's** cryptographic algorithms.
 
-#### Initialization directly without DI
+#### Initialization
+
+During initialization of persist manager, it also creates an instance of its own EncryptionManager to manage encryption and decryption of persist data.  If you don't need to encrypt and decrypt external data, other than SharedPreferences and DataStore Preferences, then you don't need to make an EncryptionManager instance of its own.
+
 ```kotlin
-// create a PersistManager instance (optionally give keyAlias)
+// create a PersistManager instance with custom KeyStore alias
 val persistManager = PersistManager(context, "your_key_alias")
+
+// create a PersistManager instance with "keyAlias" as default KeyStore alias
+val persistManager = PersistManager(context)
 ```
 
 ### SharedPreferences Encryption
@@ -154,6 +165,35 @@ persistManager.deleteDataStorePreference("key2")
 ### EncryptionManager
 `EncryptionManager` provides additional functionality for encrypting and decrypting raw data.
 
+It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
+
+### Initialization
+
+#### You can initialize using the `KeyStore`
+```kotlin
+val encryptionManager = EncryptionManager.withKeyStore("your_key_alias")
+```
+
+#### You can initialize using the `External Key`
+
+First, generate an external key:
+```kotlin
+val externalKey = EncryptionManager.generateExternalKey()
+```
+
+Then, use the generated key to create an instance of `EncryptionManager`:
+```kotlin
+val encryptionManager = EncryptionManager.withExternalKey(externalKey)
+```
+
+#### Chaining Initialization
+You can also initialize using a method chaining approach. This allows you to configure the `EncryptionManager` with both a key from the Android KeyStore and an external key if needed.
+```kotlin
+val encryptionManager = EncryptionManager
+    .withKeyStore("myKeyAlias")
+    .withExternalKey(EncryptionManager.generateExternalKey())
+```
+
 #### Encryption Details
 * **Algorithm:** AES (Advanced Encryption Standard)
 * **Mode:** GCM (Galois/Counter Mode)
@@ -181,6 +221,29 @@ val encryptedValue = encryptionManager.encryptValue("valueToEncrypt")
 // Decrypt a Base64 encoded string and return the original value
 val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValue")
 ```
+
+#### Encrypting and Decrypting Raw Data with an External Key
+```kotlin
+// Generate an external key
+val externalKey = EncryptionManager.generateExternalKey()
+
+// Create an EncryptionManager instance with the external key
+val encryptionManager = EncryptionManager.withExternalKey(externalKey)
+
+// Encrypt data
+val encryptedData = encryptionManager.encryptData("plainText")
+
+// Decrypt data
+val decryptedData = encryptionManager.decryptData(encryptedData)
+val plainText = String(decryptedData, Charsets.UTF_8)
+
+// Encrypt a value and encode it to a Base64 string
+val encryptedValue = encryptionManager.encryptValue("valueToEncrypt")
+
+// Decrypt a Base64 encoded string and return the original value
+val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+```
+
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
