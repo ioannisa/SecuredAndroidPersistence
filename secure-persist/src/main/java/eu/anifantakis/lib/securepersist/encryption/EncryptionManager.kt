@@ -10,25 +10,44 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 /**
- * EncryptionManager class handles encryption and decryption using the Android KeyStore system.
+ * EncryptionManager class handles encryption and decryption using the Android KeyStore system or an external key.
  *
  * @param keyAlias The alias for the encryption key in the KeyStore.
+ * @param externalKey The external secret key for encryption and decryption.
  */
-class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryptionManager {
+
+class EncryptionManager (
+    private var keyAlias: String? = "keyAlias"
+) : IEncryptionManager {
+
+    private var externalKey: SecretKey? = null
 
     companion object {
         private const val KEYSTORE_TYPE = "AndroidKeyStore"
         private const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
         private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
         private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
+
+        fun withKeyStore(keyAlias: String): EncryptionManager {
+            return EncryptionManager(keyAlias)
+        }
+
+        fun withExternalKey(externalKey: SecretKey): EncryptionManager {
+            val manager = EncryptionManager(null)
+            manager.setExternalKey(externalKey)
+            return manager
+        }
     }
 
-    private val keyStore: KeyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply {
-        load(null)
-        if (!containsAlias(keyAlias)) {
-            generateSecretKey(keyAlias)
+    private val keyStore: KeyStore? = keyAlias?.let {
+        KeyStore.getInstance(KEYSTORE_TYPE).apply {
+            load(null)
+            if (!containsAlias(it)) {
+                generateSecretKey(it)
+            }
         }
     }
 
@@ -49,6 +68,27 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
     }
 
     /**
+     * Sets an external secret key for encryption and decryption.
+     *
+     * @param secretKey The external secret key to be used.
+     */
+    override fun setExternalKey(secretKey: SecretKey) {
+        externalKey = secretKey
+        keyAlias = null
+    }
+
+    /**
+     * Generates a new external secret key.
+     *
+     * @return The generated secret key.
+     */
+    override fun generateExternalKey(): SecretKey {
+        val keyGenerator = KeyGenerator.getInstance("AES")
+        keyGenerator.init(256)
+        return keyGenerator.generateKey()
+    }
+
+    /**
      * Encrypts the given data using the secret key.
      *
      * @param data The plaintext data to encrypt.
@@ -56,7 +96,7 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
      */
     override fun encryptData(data: String): ByteArray {
         val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-        val secretKey = keyStore.getKey(keyAlias, null) as SecretKey
+        val secretKey = getKey()
         cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         val iv = cipher.iv
         val encryptedData = cipher.doFinal(data.toByteArray(StandardCharsets.UTF_8))
@@ -73,7 +113,7 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
      */
     override fun decryptData(encryptedData: ByteArray): String {
         val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-        val secretKey = keyStore.getKey(keyAlias, null) as SecretKey
+        val secretKey = getKey()
 
         val iv = ByteArray(IV_SIZE)
         System.arraycopy(encryptedData, 0, iv, 0, iv.size)
@@ -129,8 +169,12 @@ class EncryptionManager(private val keyAlias: String = "keyAlias") : IEncryption
      * @return The attestation certificate chain.
      */
     override fun getAttestationCertificateChain(alias: String): Array<Certificate> {
-        val entry = keyStore.getEntry(alias, null) as KeyStore.PrivateKeyEntry
+        val entry = keyStore?.getEntry(alias, null) as KeyStore.PrivateKeyEntry
         return entry.certificateChain
+    }
+
+    private fun getKey(): SecretKey {
+        return externalKey ?: keyStore!!.getKey(keyAlias, null) as SecretKey
     }
 
     /**

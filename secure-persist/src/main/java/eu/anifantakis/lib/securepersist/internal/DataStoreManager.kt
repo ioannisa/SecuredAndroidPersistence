@@ -13,10 +13,12 @@ import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-internal class DataStoreManager(private val context: Context, private val encryptionManager: IEncryptionManager) {
+private val Context.dataStore by preferencesDataStore("encrypted_datastore")
 
-    // Create a DataStore instance
-    private val Context.dataStore by preferencesDataStore("encrypted_datastore")
+internal class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager) {
+
+    // Use the same DataStore instance across all calls
+    private val dataStore = context.dataStore
 
     /**
      * Stores a value in DataStore.
@@ -35,7 +37,7 @@ internal class DataStoreManager(private val context: Context, private val encryp
             else -> throw IllegalArgumentException("Unsupported type")
         }
 
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[preferencesKey] = value
         }
     }
@@ -58,7 +60,7 @@ internal class DataStoreManager(private val context: Context, private val encryp
             else -> throw IllegalArgumentException("Unsupported type")
         }
 
-        val preferences = context.dataStore.data.map { preferences ->
+        val preferences = dataStore.data.map { preferences ->
             when (defaultValue) {
                 is Boolean -> preferences[preferencesKey as Preferences.Key<Boolean>] ?: defaultValue
                 is Int -> preferences[preferencesKey as Preferences.Key<Int>] ?: defaultValue
@@ -81,7 +83,7 @@ internal class DataStoreManager(private val context: Context, private val encryp
     suspend fun <T> putEncrypted(key: String, value: T) {
         val dataKey = stringPreferencesKey(key)
         val encryptedValue = encryptionManager.encryptValue(value)
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[dataKey] = encryptedValue
         }
     }
@@ -95,7 +97,7 @@ internal class DataStoreManager(private val context: Context, private val encryp
      */
     suspend fun <T> getEncrypted(key: String, defaultValue: T): T {
         val dataKey = stringPreferencesKey(key)
-        val encryptedValue = context.dataStore.data.map { preferences ->
+        val encryptedValue = dataStore.data.map { preferences ->
             preferences[dataKey]
         }.first() ?: return defaultValue
         return encryptionManager.decryptValue(encryptedValue, defaultValue)
@@ -108,7 +110,7 @@ internal class DataStoreManager(private val context: Context, private val encryp
      */
     suspend fun delete(key: String) {
         val dataKey = stringPreferencesKey(key)
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences.remove(dataKey)
         }
     }

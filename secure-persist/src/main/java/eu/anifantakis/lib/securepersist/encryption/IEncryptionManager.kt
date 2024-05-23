@@ -1,6 +1,7 @@
 package eu.anifantakis.lib.securepersist.encryption
 
 import java.security.cert.Certificate
+import javax.crypto.SecretKey
 
 interface IEncryptionManager {
     /**
@@ -43,4 +44,18 @@ interface IEncryptionManager {
      * @return The attestation certificate chain.
      */
     fun getAttestationCertificateChain(alias: String = "keyAlias"): Array<Certificate>
+
+    /**
+     * Sets an external secret key for encryption and decryption.
+     *
+     * @param secretKey The external secret key to be used.
+     */
+    fun setExternalKey(secretKey: SecretKey)
+
+    /**
+     * Generates a new external secret key.
+     *
+     * @return The generated secret key.
+     */
+    fun generateExternalKey(): SecretKey
 }
