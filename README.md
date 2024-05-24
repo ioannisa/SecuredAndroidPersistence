@@ -1,5 +1,5 @@
 # Android Secure Persist Library
-## Leverage your Preferences in Android
+## Leverage your Persistence and Encryption in Android
 *by Ioannis Anifantakis*
 
 Android Secure Persist Library is an Android library written purely in Kotlin. It is designed to provide secure and efficient storage of preferences in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data is stored safely, protecting it from unauthorized access.
