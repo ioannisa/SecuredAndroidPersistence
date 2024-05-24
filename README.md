@@ -42,7 +42,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.10")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.11")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -264,7 +264,7 @@ val encryptionManager = EncryptionManager
 encryptionManager.setExternalKey(externalKey)
 ```
 
-You can supply an external also only for a specific entryption/decryption, while leaving the default key for everything else
+You can supply an external also only for a specific entryption/decryption in Static context, leaving the default key for everything else
 ```kotlin
 // Create an EncryptionManager instance
 val encryptionManager = EncryptionManager
@@ -276,16 +276,18 @@ val externalKey = EncryptionManager.generateExternalKey()
 // we will now use that key only for the specified encryptions/decryptions
 
 // Encrypt a value and encode it to a Base64 string with custom key
-val encryptedValue1 = encryptionManager.encryptValue("valueToEncrypt", withKey = externalKey)
+val encryptedValue1 = EncryptionManager.encryptValue("valueToEncrypt", secretKey = externalKey)
 // Encrypt a value and encode it to a Base64 string with default key
 val encryptedValue2 = encryptionManager.encryptValue("valueToEncrypt")
 
 // Decrypt a Base64 encoded string and return the original value with custom key
-val decryptedValue1 = encryptionManager.decryptValue(encryptedValue, "defaultValue", withKey = externalKey)
+val decryptedValue1 = EncryptionManager.decryptValue(encryptedValue, "defaultValue", secretKey = externalKey)
 // Decrypt a Base64 encoded string and return the original value with default key
 val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultValue")
-
 ```
+
+## Testing
+You can find extended tests inside the `androidTest` folder for both the PersistManager and the Encryption manager to have even more examples of their usage.
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
