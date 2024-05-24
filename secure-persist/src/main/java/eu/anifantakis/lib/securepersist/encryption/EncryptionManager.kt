@@ -3,6 +3,7 @@ package eu.anifantakis.lib.securepersist.encryption
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.security.cert.Certificate
@@ -10,6 +11,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * EncryptionManager class handles encryption and decryption using the Android KeyStore system or an external key.
@@ -94,8 +96,7 @@ class EncryptionManager : IEncryptionManager {
                     else -> throw IllegalArgumentException("Unsupported type")
                 }
             } catch (e: Exception) {
-                // Log the exception
-                // Log.e("EncryptionManager", "Decryption failed", e)
+                Log.e("EncryptionManager", "Decryption failed", e)
                 defaultValue
             }
         }
@@ -108,13 +109,18 @@ class EncryptionManager : IEncryptionManager {
          * @return The encrypted data as a byte array.
          */
         fun encryptData(data: String, secretKey: SecretKey): ByteArray {
-            val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            val iv = cipher.iv
-            val encryptedData = cipher.doFinal(data.toByteArray(StandardCharsets.UTF_8))
+            return try {
+                val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                val iv = cipher.iv
+                val encryptedData = cipher.doFinal(data.toByteArray(StandardCharsets.UTF_8))
 
-            // Combine IV and encrypted data
-            return combineIvAndEncryptedData(iv, encryptedData)
+                // Combine IV and encrypted data
+                combineIvAndEncryptedData(iv, encryptedData)
+            } catch (e: Exception) {
+                Log.e("EncryptionManager", "Encryption failed", e)
+                throw e
+            }
         }
 
         /**
@@ -125,21 +131,27 @@ class EncryptionManager : IEncryptionManager {
          * @return The decrypted plaintext data as a string.
          */
         fun decryptData(encryptedData: ByteArray, secretKey: SecretKey): String {
-            if (encryptedData.size < IV_SIZE) {
-                throw IllegalArgumentException("Encrypted data is too short to contain a valid IV")
+            return try {
+                if (encryptedData.size < IV_SIZE) {
+                    throw IllegalArgumentException("Encrypted data is too short to contain a valid IV")
+                }
+
+                val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+
+                val iv = ByteArray(IV_SIZE)
+                System.arraycopy(encryptedData, 0, iv, 0, iv.size)
+
+                val encryptedBytes = ByteArray(encryptedData.size - iv.size)
+                System.arraycopy(encryptedData, iv.size, encryptedBytes, 0, encryptedBytes.size)
+
+                val ivSpec = GCMParameterSpec(TAG_SIZE, iv)
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
+                String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8)
+            } catch (e: Exception) {
+                // Log the exception for better debugging and tracing
+                Log.e("EncryptionManager", "Decryption failed", e)
+                throw e
             }
-
-            val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-
-            val iv = ByteArray(IV_SIZE)
-            System.arraycopy(encryptedData, 0, iv, 0, iv.size)
-
-            val encryptedBytes = ByteArray(encryptedData.size - iv.size)
-            System.arraycopy(encryptedData, iv.size, encryptedBytes, 0, encryptedBytes.size)
-
-            val ivSpec = GCMParameterSpec(TAG_SIZE, iv)
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
-            return String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8)
         }
 
         /**
@@ -154,6 +166,28 @@ class EncryptionManager : IEncryptionManager {
             System.arraycopy(iv, 0, combined, 0, iv.size)
             System.arraycopy(encryptedData, 0, combined, iv.size, encryptedData.size)
             return combined
+        }
+
+        /**
+         * Encodes a SecretKey to a Base64 string for storage or transmission.
+         *
+         * @param secretKey The SecretKey to encode.
+         * @return The Base64 encoded string representation of the SecretKey.
+         */
+        fun encodeSecretKey(secretKey: SecretKey): String {
+            val encodedKey = secretKey.encoded
+            return Base64.encodeToString(encodedKey, Base64.DEFAULT)
+        }
+
+        /**
+         * Decodes an encoded SecretKey that was stored as Base64 string from the "encodeSecretKey" function back to a SecretKey.
+         *
+         * @param encodedKey The Base64 encoded string representation of the SecretKey.
+         * @return The decoded SecretKey.
+         */
+        fun decodeSecretKey(encodedKey: String): SecretKey {
+            val decodedKey = Base64.decode(encodedKey, Base64.DEFAULT)
+            return SecretKeySpec(decodedKey, 0, decodedKey.size, "AES")
         }
     }
 
@@ -180,17 +214,6 @@ class EncryptionManager : IEncryptionManager {
             .build()
         keyGenerator.init(keyGenParameterSpec)
         keyGenerator.generateKey()
-    }
-
-    /**
-     * Sets an external secret key for encryption and decryption.
-     *
-     * @param secretKey The external secret key to be used.
-     * @return The EncryptionManager instance.
-     */
-    fun withExternalKey(secretKey: SecretKey): EncryptionManager {
-        setExternalKey(secretKey)
-        return this
     }
 
     /**
@@ -256,8 +279,14 @@ class EncryptionManager : IEncryptionManager {
         return entry.certificateChain
     }
 
+    /**
+     * Retrieves the secret key from the KeyStore or the external key.
+     *
+     * @return The secret key.
+     */
     private fun getKey(): SecretKey {
-        return externalKey ?: keyStore?.getKey(keyAlias, null) as? SecretKey
-        ?: throw IllegalStateException("No key available")
+        return externalKey ?: keyAlias?.let {
+            keyStore?.getKey(it, null) as SecretKey
+        } ?: throw IllegalStateException("No key available for encryption/decryption")
     }
 }

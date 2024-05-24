@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.crypto.SecretKey
 
 @RunWith(AndroidJUnit4::class)
 class EncryptionManagerTest {
@@ -131,6 +132,20 @@ class EncryptionManagerTest {
 
         encryptedData = encryptionManager.encryptData(originalText)
         decryptedText = encryptionManager.decryptData(encryptedData)
+
+        assertEquals(originalText, decryptedText)
+    }
+
+    @Test
+    fun testEncodeDecodeSecretKey() {
+        val originalKey = EncryptionManager.generateExternalKey()
+        val originalText = "Hello, Secure World!"
+        val encryptedData = EncryptionManager.encryptData(originalText, originalKey)
+
+        val encodedKey: String = EncryptionManager.encodeSecretKey(originalKey)
+        val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
+
+        val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
 
         assertEquals(originalText, decryptedText)
     }

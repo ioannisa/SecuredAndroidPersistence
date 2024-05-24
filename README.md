@@ -42,7 +42,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.11")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.12")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -284,6 +284,26 @@ val encryptedValue2 = encryptionManager.encryptValue("valueToEncrypt")
 val decryptedValue1 = EncryptionManager.decryptValue(encryptedValue, "defaultValue", secretKey = externalKey)
 // Decrypt a Base64 encoded string and return the original value with default key
 val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+```
+
+#### Storing the externalKey (SecretKey) to some other medium
+If you have generated a key and want to securely transmit it to some API or retrieve it, then this library provides two convenience static methods for `encoding` and `decoding` that key to a string so you can easily transfer it.
+
+```kotlin
+// generate a key
+val originalKey = EncryptionManager.generateExternalKey()
+
+// encrypt your data with that external key
+val encryptedData = EncryptionManager.encryptData("Hello, Secure World!", originalKey)
+
+// create a string that contains the encoded key (maybe then send it to some server)
+val encodedKey: String = EncryptionManager.encodeSecretKey(originalKey)
+
+// create another key from that encoded string (maybe you got that as a string from a server)
+val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
+
+// as you can see, you can decode the encrypted data using the key that was reconstructed from the encoded string
+val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
 ```
 
 ## Testing
