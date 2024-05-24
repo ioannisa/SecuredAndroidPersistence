@@ -75,19 +75,23 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object EncryptionModule {
 
-    // Provide a PersistManager that allows for out-of-the-box 
-    // 1. Encrypted SharedPreferences with property delegation
-    // 2. with and Encrypted DataStore
+    /**
+     * Provide a PersistManager that allows for out-of-the-box
+     * 1. Encrypted SharedPreferences with property delegation
+     * 2. with and Encrypted DataStore
+     */
     @Provides
     @Singleton
     fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager =
         PersistManager(context, "myKeyAlias")
 
-    // EncryptionManager is used by PersistManager internally,
-    // but don't need to provide it if you don't plan to encrypt/decrypt raw data.
-    // If all you want is encrypted Persistence, you don't have to provide EncryptionManager
-    //
-    // Use EncryptionManager only if you want to allow for advanced encryption/decryption of raw values
+    // EncryptionManager is being used internally by PersistManager.
+    // So if all you want is encrypted Persistence, you don't have to provide EncryptionManager
+
+    /**
+     * Provide an EncryptionManager only if you want to allow for
+     * advanced encryption/decryption of raw values
+     */
     @Provides
     @Singleton
     fun provideEncryptedManager(): EncryptionManager =
