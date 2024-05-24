@@ -174,7 +174,7 @@ class EncryptionManager : IEncryptionManager {
     override fun <T> decryptValue(encryptedValue: String, defaultValue: T, withKey: SecretKey?): T {
         return try {
             val encryptedData = Base64.decode(encryptedValue, Base64.DEFAULT)
-            val decryptedString = decryptData(encryptedData)
+            val decryptedString = decryptData(encryptedData, withKey)
             when (defaultValue) {
                 is Boolean -> decryptedString.toBoolean() as T
                 is Int -> decryptedString.toInt() as T
