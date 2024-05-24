@@ -42,7 +42,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.9")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.10")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -77,7 +77,7 @@ object EncryptionModule {
 
     @Provides
     @Singleton
-    fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager = 
+    fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager =
         PersistManager(context, "myKeyAlias")
 
     @Provides
@@ -168,6 +168,17 @@ persistManager.deleteDataStorePreference("key2")
 `EncryptionManager` provides additional functionality for encrypting and decrypting raw data.
 
 It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
+
+Currently, the EncryptionManager will encrypt and decrypt the following types:
+* `Boolean`
+* `Int`
+* `Float`
+* `Long`
+* `String`
+
+for any other type it will throw an `IllegalArgumentException("Unsupported type")` exception.
+
+So the `EncryptionManager` currently accepts the types that are also accepted on `SharedPreferences` and `DataStore`.
 
 ### Initialization
 
