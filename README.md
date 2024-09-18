@@ -104,9 +104,9 @@ object EncryptionModule {
 Or do it with Koin
 
 ```kotlin
-import android.content.Context
 import eu.anifantakis.lib.securepersist.PersistManager
 import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val encryptionModule = module {
@@ -116,8 +116,8 @@ val encryptionModule = module {
      * 1. Encrypted SharedPreferences with property delegation
      * 2. with an Encrypted DataStore
      */
-    single { (context: Context) -> 
-        PersistManager(context, "myKeyAlias")
+    single { 
+        PersistManager(androidContext(), "myKeyAlias")
     }
 
     // EncryptionManager is being used internally by PersistManager.
