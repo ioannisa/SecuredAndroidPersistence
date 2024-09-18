@@ -104,6 +104,11 @@ object EncryptionModule {
 Or do it with Koin
 
 ```kotlin
+import android.content.Context
+import eu.anifantakis.lib.securepersist.PersistManager
+import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
+import org.koin.dsl.module
+
 val encryptionModule = module {
 
     /**
@@ -123,9 +128,11 @@ val encryptionModule = module {
      * advanced encryption/decryption of raw values
      */
     single {
-        EncryptionManager
-            .withKeyStore("myKeyAlias")
-            .withExternalKey(EncryptionManager.generateExternalKey()) // <-- optional
+        val encryptionManager = EncryptionManager.withKeyStore("myKeyAlias")
+        val externalKey = EncryptionManager.generateExternalKey()
+
+        encryptionManager.setExternalKey(externalKey)
+        encryptionManager // Return the configured EncryptionManager
     }
 }
 ```
