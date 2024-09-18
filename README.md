@@ -58,7 +58,7 @@ repositories {
 
 #### Provide PersistManager and EncryptionManager using Hilt
 
-Do it quickly, do it with hilt
+Do it quickly, do it with Hilt
 
 ```kotlin
 import android.content.Context
@@ -100,6 +100,36 @@ object EncryptionModule {
             .withExternalKey(EncryptionManager.generateExternalKey()) // <-- optional
 }
 ```
+
+Or do it with Koin
+
+```kotlin
+val encryptionModule = module {
+
+    /**
+     * Provide a PersistManager that allows for out-of-the-box
+     * 1. Encrypted SharedPreferences with property delegation
+     * 2. with an Encrypted DataStore
+     */
+    single { (context: Context) -> 
+        PersistManager(context, "myKeyAlias")
+    }
+
+    // EncryptionManager is being used internally by PersistManager.
+    // So if all you want is encrypted Persistence, you don't have to provide EncryptionManager
+
+    /**
+     * Provide an EncryptionManager only if you want to allow for
+     * advanced encryption/decryption of raw values
+     */
+    single {
+        EncryptionManager
+            .withKeyStore("myKeyAlias")
+            .withExternalKey(EncryptionManager.generateExternalKey()) // <-- optional
+    }
+}
+```
+
 
 ### PersistManager
 `PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both SharedPreferences and DataStore leverages the **EncryptionManager's** cryptographic algorithms.
