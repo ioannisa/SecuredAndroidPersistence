@@ -1,6 +1,9 @@
 package eu.anifantakis.lib.securepersist
 
 import android.content.Context
+import android.util.Base64
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import eu.anifantakis.lib.securepersist.internal.DataStoreManager
@@ -10,8 +13,9 @@ import kotlin.reflect.KProperty
 class PersistManager(context: Context, keyAlias: String) {
 
     private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias)
-    private val sharedPreferencesManager = SharedPreferencesManager(context)
-    private val dataStoreManager = DataStoreManager(context, encryptionManager)
+    internal val sharedPreferencesManager = SharedPreferencesManager(context)
+    internal val dataStoreManager = DataStoreManager(context, encryptionManager)
+    internal val gson = Gson()
 
     // Wrapper methods for SharedPreferencesManager
 
@@ -52,16 +56,6 @@ class PersistManager(context: Context, keyAlias: String) {
      *
      * @param key The key to store the value under.
      * @param value The value to store.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val encryptedStore = PersistManager(context)
-     *
-     * encryptedStore.putDataStorePreference("key1", "exampleString")
-     * encryptedStore.putDataStorePreference("key2", 123)
-     * encryptedStore.putDataStorePreference("key3", true)
-     * ```
      */
     suspend fun <T> putDataStorePreference(key: String, value: T) {
         dataStoreManager.put(key, value)
@@ -73,57 +67,27 @@ class PersistManager(context: Context, keyAlias: String) {
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
      * @return The retrieved value.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val encryptedStore = PersistManager(context)
-     *
-     * val myStr: String = encryptedStore.getDataStorePreference("key1", "")
-     * val myInt: Int = encryptedStore.getDataStorePreference("key2", 0)
-     * val myBool: Boolean = encryptedStore.getDataStorePreference("key3", false)
-     * ```
      */
     suspend fun <T : Any> getDataStorePreference(key: String, defaultValue: T): T {
         return dataStoreManager.get(key, defaultValue)
     }
 
     /**
-     * Encrypts and Saves a value to DataStore.
+     * Encrypts and saves a value to DataStore.
      *
      * @param key The key to store the value under.
      * @param value The value to store.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val encryptedStore = PersistManager(context)
-     *
-     * encryptedStore.encryptDataStorePreference(eStringKey, "encryptedString")
-     * encryptedStore.encryptDataStorePreference(eIntKey, 567)
-     * encryptedStore.encryptDataStorePreference(eBooleanKey, true)
-     * ```
      */
     suspend fun <T> encryptDataStorePreference(key: String, value: T) {
         dataStoreManager.putEncrypted(key, value)
     }
 
     /**
-     * Decrypts and Retrieves a value from DataStore.
+     * Decrypts and retrieves a value from DataStore.
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
      * @return The decrypted value.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val encryptedStore = PersistManager(context)
-     *
-     * val myStr: String = encryptedStore.decryptDataStorePreference("key1", "")
-     * val myInt: Int = encryptedStore.decryptDataStorePreference("key2", 0)
-     * val myBool: Boolean = encryptedStore.decryptDataStorePreference("key3", false)
-     * ```
      */
     suspend fun <T> decryptDataStorePreference(key: String, defaultValue: T): T {
         return dataStoreManager.getEncrypted(key, defaultValue)
@@ -133,13 +97,6 @@ class PersistManager(context: Context, keyAlias: String) {
      * Deletes a value from DataStore.
      *
      * @param key The key to delete the value under.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val encryptedStore = PersistManager(context)
-     * encryptedStore.deleteDataStorePreference("key1")
-     * ```
      */
     suspend fun deleteDataStorePreference(key: String) {
         dataStoreManager.delete(key)
@@ -167,46 +124,104 @@ class PersistManager(context: Context, keyAlias: String) {
     }
 
     /**
-     * Uses Delegation to set and get encrypted SharedPreferences.
+     * Uses delegation to set and get encrypted SharedPreferences.
      * Key to the preference is automatically assigned by the variable name.
      *
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedPreference instance.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val store = PersistManager(context)
-     *
-     * var myStr by store.preference("delegationString1")
-     * var myInt by store.preference(11)
-     * var myBool by store.preference(true)
-     * ```
      */
     fun <T> preference(defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue)
 
     /**
-     * Uses Delegation to set and get encrypted SharedPreferences and sets the key to the property name.
+     * Uses delegation to set and get encrypted SharedPreferences and sets the key to the property name.
      *
      * @param key The key to store the value under.
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedPreference instance.
-     *
-     * ```
-     *
-     * // Example usage:
-     * val store = PersistManager(context)
-     *
-     * var myStr by store.preference("myStr", "delegationString1")
-     * var myInt by store.preference("myInt"", 11)
-     * var myBool by store.preference("myBool"", true)
-     * ```
      */
     fun <T> preference(key: String = "", defaultValue: T): EncryptedPreference<T> {
         return if (key.trim().isEmpty()) {
             EncryptedPreference(this, defaultValue, key)
         } else {
             EncryptedPreference(this, defaultValue)
+        }
+    }
+
+    // Methods for handling complex objects in SharedPreferences
+
+    /**
+     * Saves an object to SharedPreferences by serializing it to JSON.
+     *
+     * @param key The key under which the object will be stored.
+     * @param value The object to be stored.
+     */
+    fun <T> putObjectSharedPreference(key: String, value: T) {
+        try {
+            val jsonString = gson.toJson(value)
+            sharedPreferencesManager.put(key, jsonString)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Retrieves an object from SharedPreferences by deserializing the stored JSON string.
+     *
+     * @param key The key under which the object is stored.
+     * @return The retrieved object, or null if not found or an error occurs.
+     */
+    internal inline fun <reified T> getObjectSharedPreference(key: String): T? {
+        return try {
+            val jsonString = sharedPreferencesManager.get(key, "") as String
+            if (jsonString.isEmpty()) {
+                null
+            } else {
+                gson.fromJson<T>(jsonString, object : TypeToken<T>() {}.type)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // Methods for handling complex objects in DataStore
+
+    /**
+     * Saves an object to DataStore by serializing it to JSON and encrypting the JSON string.
+     *
+     * @param key The key under which the object will be stored.
+     * @param value The object to be stored.
+     */
+    suspend fun <T> putObjectDataStorePreference(key: String, value: T) {
+        try {
+            val jsonString = gson.toJson(value)
+            val encryptedData = encryptionManager.encryptData(jsonString)
+            val encryptedBase64 = Base64.encodeToString(encryptedData, Base64.NO_WRAP)
+            dataStoreManager.put(key, encryptedBase64)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Retrieves an object from DataStore by decrypting and deserializing the stored JSON string.
+     *
+     * @param key The key under which the object is stored.
+     * @return The retrieved object, or null if not found or an error occurs.
+     */
+    internal suspend inline fun <reified T> getObjectDataStorePreference(key: String): T? {
+        return try {
+            val encryptedBase64 = dataStoreManager.get(key, "") as String
+            if (encryptedBase64.isEmpty()) {
+                null
+            } else {
+                val encryptedData = Base64.decode(encryptedBase64, Base64.NO_WRAP)
+                val decryptedJson = encryptionManager.decryptData(encryptedData)
+                gson.fromJson<T>(decryptedJson, object : TypeToken<T>() {}.type)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

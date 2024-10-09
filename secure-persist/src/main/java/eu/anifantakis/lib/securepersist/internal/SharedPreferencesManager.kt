@@ -34,16 +34,16 @@ internal class SharedPreferencesManager(context: Context) {
      * @param value The value to store.
      */
     fun <T> put(key: String, value: T) {
-        sharedPreferences.edit {
+        sharedPreferences.edit().apply {
             when (value) {
-                is Boolean -> putBoolean(key, value).apply()
-                is Int -> putInt(key, value).apply()
-                is Float -> putFloat(key, value).apply()
-                is Long -> putLong(key, value).apply()
-                is String -> putString(key, value).apply()
-                else -> throw UnsupportedOperationException("Unsupported type")
+                is Boolean -> putBoolean(key, value)
+                is Int -> putInt(key, value)
+                is Float -> putFloat(key, value)
+                is Long -> putLong(key, value)
+                is String -> putString(key, value)
+                else -> throw IllegalArgumentException("Unsupported type")
             }
-        }
+        }.apply()
     }
 
     /**

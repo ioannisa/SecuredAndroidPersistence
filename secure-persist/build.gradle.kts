@@ -39,6 +39,7 @@ dependencies {
 
     implementation(libs.androidx.security.crypto) // encrypted shared preferences
     implementation(libs.androidx.datastore.preferences)  // data store preferences
+    implementation(libs.gson)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

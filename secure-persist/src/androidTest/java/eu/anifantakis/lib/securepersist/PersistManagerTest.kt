@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -102,5 +103,44 @@ class PersistManagerTest {
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
+    }
+
+    @Test
+    fun testSharedPreferencesObject() {
+        // Define a custom object
+        data class User(val id: Int, val name: String, val email: String)
+
+        val user = User(1, "John Doe", "john.doe@example.com")
+
+        // Store the object
+        persistManager.putObjectSharedPreference("user_key", user)
+
+        // Retrieve the object
+        val retrievedUser: User? = persistManager.getObjectSharedPreference("user_key")
+
+        // Assertions
+        assertNotNull(retrievedUser)
+        assertEquals(user.id, retrievedUser?.id)
+        assertEquals(user.name, retrievedUser?.name)
+        assertEquals(user.email, retrievedUser?.email)
+    }
+
+    @Test
+    fun testDataStoreObject() = runBlocking {
+        // Define a custom object
+        data class Settings(val notificationsEnabled: Boolean, val theme: String)
+
+        val settings = Settings(true, "dark")
+
+        // Store the object
+        persistManager.putObjectDataStorePreference("settings_key", settings)
+
+        // Retrieve the object
+        val retrievedSettings: Settings? = persistManager.getObjectDataStorePreference("settings_key")
+
+        // Assertions
+        assertNotNull(retrievedSettings)
+        assertEquals(settings.notificationsEnabled, retrievedSettings?.notificationsEnabled)
+        assertEquals(settings.theme, retrievedSettings?.theme)
     }
 }
