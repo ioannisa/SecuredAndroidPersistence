@@ -207,6 +207,25 @@ secureString = "newSecureValue"
 val storedValue = secureString
 ```
 
+
+##### Property Delegation on Custom Types
+```kotlin
+data class User(var id: Int, var name: String, var email: String)
+
+val authInfo = User(
+    id = 1,
+    name = "John",
+    email = "john.doe@example.com"
+)
+
+val user1 by persistManager.preference(authInfo)
+user1.name = "george"
+
+val user2 by persistManager.preference(authInfo)
+assertEquals(user2.name, user1.name)
+```
+
+
 ### DataStore Encryption
 Unlike SharedPreferences, DataStore does not natively support encryption. SecurePersist provides the missing functionality to securely handle DataStore preferences, ensuring your data is encrypted with the same zero-configuration approach.
 
