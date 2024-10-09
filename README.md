@@ -2,31 +2,46 @@
 ## Leverage your Persistence and Encryption in Android
 *by Ioannis Anifantakis*
 
-Android Secure Persist Library is an Android library written purely in Kotlin. It is designed to provide secure and efficient storage of preferences in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data is stored safely, protecting it from unauthorized access.
+Android Secure Persist Library is a pure Kotlin library designed to provide secure and efficient storage of preferences, complex data types, and files in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data —including complex objects and files— is stored safely, protecting it from unauthorized access.
 
-This library simplifies the process of encrypting and decrypting preferences using `SharedPreferences` and `DataStore`, making it easy for developers to implement secure storage solutions.
+This library simplifies the process of encrypting and decrypting preferences using `SharedPreferences` and `DataStore`, supports serialization of complex data types, and provides robust file encryption capabilities, making it easy for developers to implement comprehensive secure storage solutions.
+
+
+
+
 
 ## Features
 * **Secure Preferences Management:** Easily encrypt and decrypt preferences using `SharedPreferences` and `DataStore`.
+* **Support for Complex Data Types:** Serialize and securely store complex objects, including custom classes and collections.
+* **File Encryption and Decryption:** Securely encrypt and decrypt files, ensuring sensitive data remains protected even when stored externally.
 * **Property Delegation:** Use Kotlin property delegation for seamless integration of encrypted preferences.
-* **Raw Data Encryption:** Directly encrypt and decrypt raw data with EncryptionManager for additional flexibility.
+* **Raw Data Encryption:** Directly encrypt and decrypt raw data and files with `EncryptionManager` for additional flexibility.
 * **Asynchronous Operations:** Efficiently handle preferences with non-blocking operations using DataStore.
+* **External Key Management:** Use custom external keys for scenarios requiring cross-device data decryption or remote key retrieval.
+
+
+
+
 
 ## Why Use SecurePersist?
-* **Security:** Protect sensitive data with robust encryption techniques.
-* **Ease of Use:** Simplifies the process of managing encrypted preferences with a user-friendly API.
-* **Versatility:** Supports a variety of data types and integrates seamlessly with existing Android components.
-* **Variety of usage:** Works with several primitive types and strings, but also supports encryption/decryption of Files.
+* **Security:** Protect sensitive data with robust encryption techniques, including complex objects and files.
+* **Ease of Use:** Simplifies the process of managing encrypted preferences and data with a user-friendly API.
+* **Versatility:** Supports a variety of data types, including primitives, complex objects, and files, integrating seamlessly with existing Android components.
 * **Performance:** Ensures non-blocking operations for a smooth user experience.
+* **Flexibility:** Allows for external key management, enabling secure data storage and retrieval across devices or from remote servers.
+
+
+
+
 
 ## Installation
 
 There are two ways to install this library to your project
 
-### Install by adding directly the module to your project
+### Option 1: Add the Module Directly to Your Project
 The directory `secure-persist` contains the module of this library, so you can
-1. copy it to your root folder of the project (same as you see it in this repo folders)
-2. at the bottom of your `settings.gradle` you tell android to treat the folder you copied as a module
+1. Copy the secure-persist directory from this repository into the root folder of your project.
+2. Include the Module at the bottom of your `settings.gradle` 
 ```kotlin
 rootProject.name = "My App Name"
 include(":app")
@@ -37,7 +52,7 @@ include(":secure-persist") // <-- add this line so android knows this folder is 
 implementation(project(":secure-persist"))
 ```
 
-### Install as a Jitpack library to your dependencies
+### Option 2: Use JitPack to Add as a Dependency
 
 [![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/SecuredAndroidPersistence)
 
@@ -46,7 +61,7 @@ implementation(project(":secure-persist"))
 implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.13")
 ```
 
-2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
+2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) so this library is able to download
 ```kotlin
 repositories {
     google()
@@ -134,24 +149,29 @@ val encryptionModule = module {
 
 
 ### PersistManager
-`PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both SharedPreferences and DataStore leverages the **EncryptionManager's** cryptographic algorithms.
+`PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both `SharedPreferences` and `DataStore`, leveraging the `EncryptionManager`'s cryptographic algorithms. It now supports serialization and encryption of complex data types, including custom objects and collections.
+
 
 #### Initialization
+When initializing `PersistManager`, it creates an instance of its own `EncryptionManager` to handle encryption and decryption of persistent data. If you don't need to encrypt and decrypt external data beyond preferences, you don't need a separate `EncryptionManager` instance.
 
-During initialization of persist manager, it also creates an instance of its own EncryptionManager to manage encryption and decryption of persist data.  If you don't need to encrypt and decrypt external data, other than SharedPreferences and DataStore Preferences, then you don't need to make an EncryptionManager instance of its own.
+
+
 
 ```kotlin
-// create a PersistManager instance with custom KeyStore alias
+// Create a PersistManager instance with a custom KeyStore alias
 val persistManager = PersistManager(context, "your_key_alias")
 
-// create a PersistManager instance with "keyAlias" as default KeyStore alias
+// Create a PersistManager instance with the default KeyStore alias ("keyAlias")
 val persistManager = PersistManager(context)
+
 ```
 
 ### SharedPreferences Encryption
-Android Secure Persist offers a zero-configuration approach for encrypting and decrypting SharedPreferences. This means you can easily secure your SharedPreferences without additional setup.
+SecurePersist offers a zero-configuration approach for encrypting and decrypting SharedPreferences, now including complex data types.
 
-#### SharedPreferences Example
+
+#### Securely Storing and Retrieving Primitive Types with SharedPreferences
 ```kotlin
 // Encrypt and save a preference
 persistManager.encryptSharedPreference("key1", "secureValue")
@@ -162,6 +182,41 @@ val value: String = persistManager.decryptSharedPreference("key1", "defaultValue
 // Delete a preference
 persistManager.deleteSharedPreference("key1")
 ```
+
+
+#### Securely Storing and Retrieving Primitive Types with DataStore
+
+SecurePersist extends encryption capabilities to `DataStore`, supporting both primitive and complex data types. `DataStore` provides asynchronous, non-blocking operations, making it suitable for handling preferences without affecting the main thread.
+
+Storing and Retrieving Primitive Types with DataStore
+Since `DataStore` operations are suspend functions, you need to call them within a coroutine or another suspend function.
+
+```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+// Encrypt and save a preference
+CoroutineScope(Dispatchers.IO).launch {
+    persistManager.encryptDataStorePreference("key1", "secureValue")
+}
+
+// Decrypt and retrieve a preference
+CoroutineScope(Dispatchers.IO).launch {
+    val value: String = persistManager.decryptDataStorePreference("key1", "defaultValue")
+    println("Retrieved value: $value")
+}
+
+// Delete a preference
+CoroutineScope(Dispatchers.IO).launch {
+    persistManager.deleteDataStorePreference("key1")
+}
+```
+
+#### Note on Coroutines
+* **Dispatchers.IO:** Used for IO-bound operations.
+* **CoroutineScope:** Manages the lifecycle of coroutines. Ensure you handle coroutine scopes appropriately to avoid memory leaks.
+
 
 #### SharedPreferences Property Delegation
 
