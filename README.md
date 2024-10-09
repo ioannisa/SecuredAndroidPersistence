@@ -94,10 +94,8 @@ object EncryptionModule {
      */
     @Provides
     @Singleton
-    fun provideEncryptedManager(): EncryptionManager =
-        EncryptionManager
-            .withKeyStore("myKeyAlias")
-            .withExternalKey(EncryptionManager.generateExternalKey()) // <-- optional
+    fun provideEncryptedManager(@ApplicationContext context: Context): EncryptionManager {
+        return EncryptionManager(context, "myKeyAlias")
 }
 ```
 
@@ -127,12 +125,8 @@ val encryptionModule = module {
      * Provide an EncryptionManager only if you want to allow for
      * advanced encryption/decryption of raw values
      */
-    single {
-        val encryptionManager = EncryptionManager.withKeyStore("myKeyAlias")
-        val externalKey = EncryptionManager.generateExternalKey()
-
-        encryptionManager.setExternalKey(externalKey)
-        encryptionManager // Return the configured EncryptionManager
+    single<EncryptionManager> {
+        EncryptionManager(androidContext(), "myKeyAlias")
     }
 }
 ```
