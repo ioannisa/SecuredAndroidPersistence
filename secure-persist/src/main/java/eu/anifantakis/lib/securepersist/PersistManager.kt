@@ -110,16 +110,39 @@ class PersistManager(context: Context, keyAlias: String) {
     class EncryptedPreference<T>(
         private val persist: PersistManager,
         private val defaultValue: T,
-        private val key: String? = null
+        private val key: String? = null,
+        private val gson: Gson = persist.gson
     ) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
             val preferenceKey = key ?: property.name
-            return persist.decryptSharedPreference(preferenceKey, defaultValue)
+            val storedValue = persist.decryptSharedPreference(preferenceKey, "")
+            return if (storedValue.isEmpty()) {
+                defaultValue
+            } else {
+                when (defaultValue) {
+                    is Boolean, is Int, is Float, is Long, is String -> {
+                        persist.decryptSharedPreference(preferenceKey, defaultValue)
+                    }
+                    else -> {
+                        // Deserialize JSON string to object
+                        gson.fromJson(storedValue, object : TypeToken<T>() {}.type)
+                    }
+                }
+            }
         }
 
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             val preferenceKey = key ?: property.name
-            persist.encryptSharedPreference(preferenceKey, value)
+            when (value) {
+                is Boolean, is Int, is Float, is Long, is String -> {
+                    persist.encryptSharedPreference(preferenceKey, value)
+                }
+                else -> {
+                    // Serialize object to JSON string
+                    val jsonString = gson.toJson(value)
+                    persist.encryptSharedPreference(preferenceKey, jsonString)
+                }
+            }
         }
     }
 

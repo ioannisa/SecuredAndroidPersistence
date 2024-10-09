@@ -90,7 +90,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testSharedPreferencePropertyDelegation() {
+    fun testSharedPreferencePropertyDelegationPrimitive() {
         var myStr by persistManager.preference("defaultString")
 
         myStr = "newStringValue"
@@ -98,11 +98,28 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testDataStorePreferencePropertyDelegation() = runBlocking {
+    fun testDataStorePreferencePropertyDelegationPrimitive() = runBlocking {
         var myStr by persistManager.preference("dataStoreString", "defaultString")
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
+    }
+
+    @Test
+    fun testSharedPreferencePropertyDelegationCustomType() {
+        data class User(var id: Int, var name: String, var email: String)
+
+        val authInfo = User(
+            id = 1,
+            name = "John",
+            email = "john.doe@example.com"
+        )
+
+        val user1 by persistManager.preference(authInfo)
+        user1.name = "george"
+
+        val user2 by persistManager.preference(authInfo)
+        assertEquals(user2.name, user1.name)
     }
 
     @Test
