@@ -16,6 +16,7 @@ This library simplifies the process of encrypting and decrypting preferences usi
 * **Security:** Protect sensitive data with robust encryption techniques.
 * **Ease of Use:** Simplifies the process of managing encrypted preferences with a user-friendly API.
 * **Versatility:** Supports a variety of data types and integrates seamlessly with existing Android components.
+* **Variety of usage:** Works with several primitive types and strings, but also supports encryption/decryption of Files.
 * **Performance:** Ensures non-blocking operations for a smooth user experience.
 
 ## Installation
@@ -42,7 +43,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.12")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.0.13")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) in order for this library to be able to download
@@ -94,8 +95,8 @@ object EncryptionModule {
      */
     @Provides
     @Singleton
-    fun provideEncryptedManager(@ApplicationContext context: Context): EncryptionManager {
-        return EncryptionManager(context, "myKeyAlias")
+    fun provideEncryptedManager(@ApplicationContext context: Context): EncryptionManager =
+        EncryptionManager(context, "myKeyAlias")
 }
 ```
 
@@ -212,7 +213,7 @@ persistManager.deleteDataStorePreference("key2")
 
 It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
 
-Currently, the EncryptionManager will encrypt and decrypt the following types:
+Currently, the EncryptionManager will encrypt and decrypt **FILES** and the following types:
 * `Boolean`
 * `Int`
 * `Float`
@@ -227,7 +228,7 @@ So the `EncryptionManager` currently accepts the types that are also accepted on
 
 #### You can initialize using the `KeyStore`
 ```kotlin
-val encryptionManager = EncryptionManager.withKeyStore("your_key_alias")
+val encryptionManager = EncryptionManager("your_key_alias")
 ```
 
 #### You can initialize using the `External Key`
@@ -239,15 +240,7 @@ val externalKey = EncryptionManager.generateExternalKey()
 
 Then, use the generated key to create an instance of `EncryptionManager`:
 ```kotlin
-val encryptionManager = EncryptionManager.withExternalKey(externalKey)
-```
-
-#### Chaining Initialization
-You can also initialize using a method chaining approach. This allows you to configure the `EncryptionManager` with both a key from the Android KeyStore and an external key if needed.
-```kotlin
-val encryptionManager = EncryptionManager
-    .withKeyStore("myKeyAlias")
-    .withExternalKey(EncryptionManager.generateExternalKey())
+val encryptionManager = EncryptionManager(externalKey)
 ```
 
 #### Encryption Details
@@ -289,9 +282,7 @@ By doing so you can safe-keep that key at some server in order to be able to mak
 val externalKey = EncryptionManager.generateExternalKey()
 
 // Create an EncryptionManager instance with the external key
-val encryptionManager = EncryptionManager
-    .withKeyStore("myKeyAlias")
-    .withExternalKey(externalKey)
+val encryptionManager = EncryptionManager(externalKey)
 ```
 
 Also you can supply that key at runtime
@@ -300,18 +291,13 @@ Also you can supply that key at runtime
 val externalKey = EncryptionManager.generateExternalKey()
 
 // Create an EncryptionManager instance
-val encryptionManager = EncryptionManager
-    .withKeyStore("myKeyAlias")
-
-// now that will replace the default key
-encryptionManager.setExternalKey(externalKey)
+val encryptionManager = EncryptionManager("myKeyAlias")
 ```
 
 You can supply an external also only for a specific entryption/decryption in Static context, leaving the default key for everything else
 ```kotlin
 // Create an EncryptionManager instance
-val encryptionManager = EncryptionManager
-    .withKeyStore("myKeyAlias")
+val encryptionManager = EncryptionManager("myKeyAlias")
 
 // Generate an external key
 val externalKey = EncryptionManager.generateExternalKey()
@@ -347,6 +333,16 @@ val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
 
 // as you can see, you can decode the encrypted data using the key that was reconstructed from the encoded string
 val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
+```
+
+## FILES Encryption/Decription ##
+```kotlin
+// Encrypt the file from file system
+encryptionManager.encryptFile(testFile, encryptedFileName)
+
+// Decrypt the file
+val decryptedContent: ByteArray = encryptionManager.decryptFile(encryptedFileName)
+val decryptedText = String(decryptedContent)
 ```
 
 ## Testing
