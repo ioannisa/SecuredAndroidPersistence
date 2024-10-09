@@ -70,93 +70,12 @@ repositories {
 }
 ```
 
-## Usage
-
-#### Provide PersistManager and EncryptionManager using Hilt
-
-Do it quickly, do it with Hilt
-
-```kotlin
-import android.content.Context
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
-import eu.anifantakis.lib.securepersist.PersistManager
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-object EncryptionModule {
-
-    /**
-     * Provide a PersistManager that allows for out-of-the-box
-     * 1. Encrypted SharedPreferences with property delegation
-     * 2. with and Encrypted DataStore
-     */
-    @Provides
-    @Singleton
-    fun provideEncryptedPersistence(@ApplicationContext context: Context): PersistManager =
-        PersistManager(context, "myKeyAlias")
-
-    // EncryptionManager is being used internally by PersistManager.
-    // So if all you want is encrypted Persistence, you don't have to provide EncryptionManager
-
-    /**
-     * Provide an EncryptionManager only if you want to allow for
-     * advanced encryption/decryption of raw values
-     */
-    @Provides
-    @Singleton
-    fun provideEncryptedManager(@ApplicationContext context: Context): EncryptionManager =
-        EncryptionManager(context, "myKeyAlias")
-}
-```
-
-Or do it with Koin
-
-```kotlin
-import eu.anifantakis.lib.securepersist.PersistManager
-import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
-import org.koin.android.ext.koin.androidContext
-import org.koin.dsl.module
-
-val encryptionModule = module {
-
-    /**
-     * Provide a PersistManager that allows for out-of-the-box
-     * 1. Encrypted SharedPreferences with property delegation
-     * 2. with an Encrypted DataStore
-     */
-    single { 
-        PersistManager(androidContext(), "myKeyAlias")
-    }
-
-    // EncryptionManager is being used internally by PersistManager.
-    // So if all you want is encrypted Persistence, you don't have to provide EncryptionManager
-
-    /**
-     * Provide an EncryptionManager only if you want to allow for
-     * advanced encryption/decryption of raw values
-     */
-    single<EncryptionManager> {
-        EncryptionManager(androidContext(), "myKeyAlias")
-    }
-}
-```
-
-
-### PersistManager
+# PersistManager
 `PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both `SharedPreferences` and `DataStore`, leveraging the `EncryptionManager`'s cryptographic algorithms. It now supports serialization and encryption of complex data types, including custom objects and collections.
 
 
-#### Initialization
+### Initialization
 When initializing `PersistManager`, it creates an instance of its own `EncryptionManager` to handle encryption and decryption of persistent data. If you don't need to encrypt and decrypt external data beyond preferences, you don't need a separate `EncryptionManager` instance.
-
-
-
 
 ```kotlin
 // Create a PersistManager instance with a custom KeyStore alias
@@ -213,30 +132,76 @@ CoroutineScope(Dispatchers.IO).launch {
 }
 ```
 
-#### Note on Coroutines
+##### Note on Coroutines
 * **Dispatchers.IO:** Used for IO-bound operations.
 * **CoroutineScope:** Manages the lifecycle of coroutines. Ensure you handle coroutine scopes appropriately to avoid memory leaks.
+ 
+###  Complex Objects
+You can store and retrieve complex objects by serializing them to JSON and encrypting the JSON string.
+
+#### Storing and retrieving Object:
+
+This is a sample object
+```kotlin
+data class User(
+    val id: Int, 
+    val name: String, 
+    val email: String
+)
+
+val user = User(1, "John Doe", "john.doe@example.com")
+```
+
+##### Securely Storing and Retrieving using SharedPreferences:
+```kotlin
+// encrypt and store using SharedPreferences
+persistManager.putObjectSharedPreference("user_key", user)
+
+// retrieve
+val retrievedUser: User? = persistManager.getObjectSharedPreference("user_key")
+retrievedUser?.let {
+    println("User ID: ${it.id}, Name: ${it.name}, Email: ${it.email}")
+}
+```
+
+##### Securely Storing and Retrieving using DataStore:
+```kotlin
+// store using DataStore
+CoroutineScope(Dispatchers.IO).launch {
+    persistManager.putObjectDataStorePreference("user_key", user)
+}
+
+// retrieve using DataStore
+CoroutineScope(Dispatchers.IO).launch {
+    val retrievedUser: User? = persistManager.getObjectDataStorePreference("user_key")
+    retrievedUser?.let {
+        println("User ID: ${it.id}, Name: ${it.name}, Email: ${it.email}")
+    }
+}
+```
 
 
 #### SharedPreferences Property Delegation
 
-This library allows you to use Kotlin property delegation for encrypted SharedPreferences, providing a clean and intuitive way to handle your encrypted preferences.
+Use Kotlin **property delegatio**n for encrypted `SharedPreferences`, providing a clean and intuitive way to handle your encrypted preferences.
 
-**Use encrypted SharedPreferences as normal variables using property delegation**
+**Use encrypted SharedPreferences as if they were normal variables using property delegation**
 
-In this first example you can set the key of the sharedPreference manually
+##### Using Property Delegation with a Custom Key:
+
+ you can just add or read values to the secureString as if it was a normal value,  however setting values will put them in sharedPreferences securely.
 ```kotlin
-// create
-var secureString by persistManager.preference("secureString", "default")
+// Create a delegated property with "key1" as the key used in shared-preferences
+var secureString by persistManager.preference("key1", "defaultValue")
 
 secureString = "newSecureValue"
 val storedValue = secureString
 ```
 
-But with Property Delegation this is the preferred way, where you don't neeed to specify key, the variable name will be the key-name behind the scenes.
+But you can take this a step further.  If you don't set a custom Key the variable name is used as a key instead, so if you call your variable "secureString" then that is the key name used behind the scenes also in your sharedPreferences.
 ```kotlin
-// create
-var secureString by persistManager.preference("default")
+// Create a delegated property using the variable name as the key
+var secureString by persistManager.preference("defaultValue")
 
 secureString = "newSecureValue"
 val storedValue = secureString
@@ -263,8 +228,8 @@ val flag: Boolean = persistManager.decryptDataStorePreference("key3", false)
 persistManager.deleteDataStorePreference("key2")
 ```
 
-### EncryptionManager
-`EncryptionManager` provides additional functionality for encrypting and decrypting raw data.
+# EncryptionManager
+`EncryptionManager` provides additional functionality for encrypting and decrypting raw data, files, and complex objects.
 
 It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
 
@@ -283,7 +248,8 @@ So the `EncryptionManager` currently accepts the types that are also accepted on
 
 #### You can initialize using the `KeyStore`
 ```kotlin
-val encryptionManager = EncryptionManager("your_key_alias")
+val encryptionManager = EncryptionManager(context, "your_key_alias")
+
 ```
 
 #### You can initialize using the `External Key`
@@ -295,7 +261,7 @@ val externalKey = EncryptionManager.generateExternalKey()
 
 Then, use the generated key to create an instance of `EncryptionManager`:
 ```kotlin
-val encryptionManager = EncryptionManager(externalKey)
+val encryptionManager = EncryptionManager(context, externalKey)
 ```
 
 #### Encryption Details
@@ -305,12 +271,12 @@ val encryptionManager = EncryptionManager(externalKey)
 * **Key Management:** Managed by Android KeyStore
 * **Key Strength:** 256-bit keys for strong encryption
 
-AES in GCM mode is an authenticated encryption algorithm that provides both data confidentiality and integrity. This makes it highly secure and suitable for sensitive data. Using the Android KeyStore for key management adds an extra layer of security by storing keys in a secure, hardware-backed environment.
+AES in GCM mode is an authenticated encryption algorithm that provides both data confidentiality and integrity. Using the Android KeyStore for key management adds an extra layer of security by storing keys in a secure, hardware-backed environment.
 
 #### Encrypting and Decrypting Raw Data
 
 ```kotlin
-val encryptionManager = EncryptionManager("your_key_alias")
+val encryptionManager = EncryptionManager(context, "your_key_alias")
 
 // Encrypt data
 val encryptedData = encryptionManager.encryptData("plainText")
@@ -323,14 +289,14 @@ val plainText = String(decryptedData, Charsets.UTF_8)
 val encryptedValue = encryptionManager.encryptValue("valueToEncrypt")
 
 // Decrypt a Base64 encoded string and return the original value
-val decryptedValue = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+val decryptedValue: String = encryptionManager.decryptValue(encryptedValue, "defaultValue")
+
 ```
 
 #### Encrypting and Decrypting Raw Data with an External Key
-
 One important feature is the ability generate an external key, which you can then pass to the library.
 
-By doing so you can safe-keep that key at some server in order to be able to make use of it when needed in the future.
+By doing so, you can safe-keep that key on a server to be able to decrypt data when needed in the future.
 
 ```kotlin
 // Generate an external key
@@ -340,19 +306,10 @@ val externalKey = EncryptionManager.generateExternalKey()
 val encryptionManager = EncryptionManager(externalKey)
 ```
 
-Also you can supply that key at runtime
-```kotlin
-// Generate an external key
-val externalKey = EncryptionManager.generateExternalKey()
-
-// Create an EncryptionManager instance
-val encryptionManager = EncryptionManager("myKeyAlias")
-```
-
-You can supply an external also only for a specific entryption/decryption in Static context, leaving the default key for everything else
+Also you can supply that key at runtime  only for a specific entryption/decryption in Static context, leaving the keystore key for everything else
 ```kotlin
 // Create an EncryptionManager instance
-val encryptionManager = EncryptionManager("myKeyAlias")
+val encryptionManager = EncryptionManager(context, "myKeyAlias")
 
 // Generate an external key
 val externalKey = EncryptionManager.generateExternalKey()
@@ -373,6 +330,7 @@ val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultVal
 #### Storing the externalKey (SecretKey) to some other medium
 If you have generated a key and want to securely transmit it to some API or retrieve it, then this library provides two convenience static methods for `encoding` and `decoding` that key to a string so you can easily transfer it.
 
+##### Exporting custom key to save it to some server
 ```kotlin
 // generate a key
 val originalKey = EncryptionManager.generateExternalKey()
@@ -380,10 +338,13 @@ val originalKey = EncryptionManager.generateExternalKey()
 // encrypt your data with that external key
 val encryptedData = EncryptionManager.encryptData("Hello, Secure World!", originalKey)
 
-// create a string that contains the encoded key (maybe then send it to some server)
+// create a string that contains the encoded key (then send it to some server)
 val encodedKey: String = EncryptionManager.encodeSecretKey(originalKey)
+```
 
-// create another key from that encoded string (maybe you got that as a string from a server)
+##### Retrieving the custom key from the server to use it o the app
+```kotlin
+// construct a SecretKey from that encodedKey retrieved from the server
 val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
 
 // as you can see, you can decode the encrypted data using the key that was reconstructed from the encoded string
@@ -392,7 +353,14 @@ val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
 
 ## FILES Encryption/Decription ##
 ```kotlin
-// Encrypt the file from file system
+// Create an EncryptionManager instance
+val encryptionManager = EncryptionManager(context, "your_key_alias")
+
+// Specify the input file and the name for the encrypted file
+val testFile = File(context.filesDir, "plain.txt")
+val encryptedFileName = "encrypted.dat"
+
+// Encrypt the file
 encryptionManager.encryptFile(testFile, encryptedFileName)
 
 // Decrypt the file
@@ -400,14 +368,142 @@ val decryptedContent: ByteArray = encryptionManager.decryptFile(encryptedFileNam
 val decryptedText = String(decryptedContent)
 ```
 
-## Testing
-You can find extended tests inside the `androidTest` folder for both the PersistManager and the Encryption manager to have even more examples of their usage.
+# Use Cases
+
+### 1. Securely Storing User Preferences
+Using `PersistManager`, you can securely store user preferences, such as authentication tokens, settings, or any sensitive information.
+
+##### With SharedPreferences:
+```kotlin
+// Storing a user token securely
+persistManager.encryptSharedPreference("user_token", "your_token_here")
+
+// Retrieving the user token
+val userToken: String = persistManager.decryptSharedPreference("user_token", "")
+```
+
+##### With DataStore:
+```kotlin
+CoroutineScope(Dispatchers.IO).launch {
+    // Storing a user token securely
+    persistManager.encryptDataStorePreference("user_token", "your_token_here")
+
+    // Retrieving the user token
+    val userToken: String = persistManager.decryptDataStorePreference("user_token", "")
+}
+```
+
+### 2. Securely Storing Complex Objects
+You can store complex data structures, such as user profiles or app configurations.
+
+```kotlin
+data class UserProfile(
+    val id: Int, 
+    val name: String, 
+    val email: String, 
+    val roles: List<String>
+)
+
+val userProfile = UserProfile(1, "John Doe", "john.doe@example.com", listOf("admin", "editor"))
+```
+
+##### With SharedPreferences:
+```kotlin
+persistManager.putObjectSharedPreference("user_profile", userProfile)
+
+// Later retrieve it
+val retrievedProfile: UserProfile? = persistManager.getObjectSharedPreference("user_profile")
+```
+
+##### With DataStore:
+```kotlin
+CoroutineScope(Dispatchers.IO).launch {
+    persistManager.putObjectDataStorePreference("user_profile", userProfile)
+    val retrievedProfile: UserProfile? = persistManager.getObjectDataStorePreference("user_profile")
+}
+```
+
+### 3. Encrypting Files Before Uploading
+If you need to upload files to a server but want to ensure they are encrypted before transmission, you can use `EncryptionManager` to encrypt the file, then upload the encrypted file.
+
+```kotlin
+val encryptionManager = EncryptionManager(context, "your_key_alias")
+
+// Encrypt the file
+val inputFile = File(context.filesDir, "sensitive_data.txt")
+val encryptedFileName = "sensitive_data_encrypted.dat"
+encryptionManager.encryptFile(inputFile, encryptedFileName)
+
+// Now upload 'sensitive_data_encrypted.dat' to your server
+```
+
+### 4. Decrypting Files Received from a Server
+When you receive an encrypted file from a server, you can decrypt it using `EncryptionManager`.
+```kotlin
+// Assuming you've downloaded 'sensitive_data_encrypted.dat' from the server
+val decryptedContent: ByteArray = encryptionManager.decryptFile("sensitive_data_encrypted.dat")
+val decryptedText = String(decryptedContent)
+
+// Use the decrypted content as needed
+```
+
+### 5. Cross-Device Data Encryption Using External Keys
+If you need to encrypt data on one device and decrypt it on another, you can use external keys.
+```kotlin
+// On Device A - Generate external key and encrypt data
+val externalKey = EncryptionManager.generateExternalKey()
+val encodedKey = EncryptionManager.encodeSecretKey(externalKey)
+
+// Store or transmit 'encodedKey' securely to Device B
+
+// Encrypt data with the external key
+val encryptedData = EncryptionManager.encryptData("Sensitive information", externalKey)
+
+// Store or transmit 'encryptedData' to Device B
+
+// On Device B - Decode external key and decrypt data
+val decodedKey = EncryptionManager.decodeSecretKey(encodedKey)
+
+// Decrypt data
+val decryptedData = EncryptionManager.decryptData(encryptedData, decodedKey)
+val sensitiveInfo = String(decryptedData)
+```
+
+### 6. Secure Backup and Restore
+Use `EncryptionManager` to encrypt user data before backing up to cloud storage, ensuring that even if the backup is accessed by unauthorized parties, the data remains secure.
+```kotlin
+// Serialize user data to JSON
+val userDataJson = gson.toJson(userData)
+
+// Encrypt the data
+val encryptedUserData = encryptionManager.encryptData(userDataJson)
+
+// Convert to Base64 string for storage
+val encryptedUserDataString = Base64.encodeToString(encryptedUserData, Base64.NO_WRAP)
+
+// Store 'encryptedUserDataString' in cloud storage
+
+// To restore, retrieve the string from cloud storage and decrypt
+val encryptedData = Base64.decode(encryptedUserDataString, Base64.NO_WRAP)
+val decryptedJson = encryptionManager.decryptData(encryptedData)
+
+// Deserialize back to user data object
+val restoredUserData = gson.fromJson(decryptedJson, UserData::class.java)
+```
+
+# Testing
+You can find extensive tests inside the `androidTest` folder for both the `PersistManager` and the `EncryptionManage`r, providing more examples and ensuring reliability. Tests cover scenarios including:
+
+* Encryption and decryption of primitive types with `SharedPreferences` and `DataStore`.
+* Serialization, encryption, and decryption of complex objects with both storage mechanisms.
+* File encryption and decryption.
+* Using external keys for encryption and decryption.
+
+
+
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
 
 ## License
 This project is licensed under the MIT License
-
-
-
