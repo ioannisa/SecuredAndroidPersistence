@@ -105,6 +105,12 @@ persistManager.deleteSharedPreference("key1")
 
 #### Securely Storing and Retrieving Primitive Types with DataStore
 
+##### Option 1 - Accessing DataStore with coroutines
+
+Related functions:
+* `encryptDataStorePreference`
+* `decryptDataStorePreference`
+
 SecurePersist extends encryption capabilities to `DataStore`, supporting both primitive and complex data types. `DataStore` provides asynchronous, non-blocking operations, making it suitable for handling preferences without affecting the main thread.
 
 Storing and Retrieving Primitive Types with DataStore
@@ -132,12 +138,36 @@ CoroutineScope(Dispatchers.IO).launch {
 }
 ```
 
-##### Note on Coroutines
+###### Note on Coroutines
 * **Dispatchers.IO:** Used for IO-bound operations.
 * **CoroutineScope:** Manages the lifecycle of coroutines. Ensure you handle coroutine scopes appropriately to avoid memory leaks.
  
 ###  Complex Objects
 You can store and retrieve complex objects by serializing them to JSON and encrypting the JSON string.
+
+##### Option 2 - Accessing DataStore Without coroutines
+
+Related functions:
+* `encryptDataStorePreferenceSync`
+* `decryptDataStorePreferenceSync`
+
+The library allows you to make use of the DataStore without having to use coroutines (it uses coroutines behind the scenes). 
+
+It stores in a non-blocking way your preference to DataStore, while retrieving it in a blocking way (same as SharedPreferences do anyway).
+
+This allows for a more refined and easier way to use DataStore, same as with SharedPreferences.
+
+```kotlin
+
+
+// encrypt and store in non blocking way to DataStore the "value" for the given "key"
+persistManager.encryptDataStorePreferenceSync("key", "value")
+
+// decrypt and get in a blocking way the value held by the "key" from the DataStore
+val value: String = persistManager.decryptDataStorePreferenceSync("key", "defaultValue")
+```
+
+
 
 #### Storing and retrieving Object:
 
