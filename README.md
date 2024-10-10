@@ -261,12 +261,12 @@ for any other type the library will attempt to serialize the given input.
 
 | Data Type | Supported Directly | Handled via Serialization |
 |-----------|:------------------:|:-------------------------:|
-| Boolean   | Yes                | N/A                       |
-| Int       | Yes                | N/A                       |
-| Float     | Yes                | N/A                       |
-| Long      | Yes                | N/A                       |
-| Double    | Yes                | N/A                       |
-| String    | Yes                | N/A                       |
+| Boolean   | Yes                | No                        |
+| Int       | Yes                | No                        |
+| Float     | Yes                | No                        |
+| Long      | Yes                | Yes                       |
+| Double    | Yes                | No                        |
+| String    | Yes                | No                        |
 | Custom Objects (e.g., Data Classes) | No | Yes             |
 
 Note: Custom objects, such as data classes, are not directly supported but are handled through serialization.
