@@ -78,6 +78,23 @@ class PersistManagerTest {
     }
 
     @Test
+    fun testEncryptAndDecryptDataStorePreferenceSync() {
+        val key = "encryptedDataStoreKey"
+        val value = "encryptedDataStoreValue"
+
+        // Encrypt & Store the primitive at the DataStore without exposing coroutines in non-blocking asynchronous way
+        persistManager.encryptDataStorePreferenceSync(key, value)
+
+        // because the above is asynchronous let it finish by freezing main thread for some time
+        Thread.sleep(500L)
+
+        // Decrypt & Retrieve the primitive from DataStore in a blocking synchronous way without exposing coroutines
+        val retrievedValue: String = persistManager.decryptDataStorePreferenceSync(key, "")
+
+        assertEquals(value, retrievedValue)
+    }
+
+    @Test
     fun testDeleteDataStorePreference() = runBlocking {
         val key = "deleteDataStoreKey"
         val value = "toBeDeleted"
@@ -157,6 +174,28 @@ class PersistManagerTest {
 
         // Retrieve the object
         val retrievedSettings: Settings? = persistManager.getObjectDataStorePreference("settings_key")
+
+        // Assertions
+        assertNotNull(retrievedSettings)
+        assertEquals(settings.notificationsEnabled, retrievedSettings?.notificationsEnabled)
+        assertEquals(settings.theme, retrievedSettings?.theme)
+    }
+
+    @Test
+    fun testDataStoreObjectSync() {
+        // Define a custom object
+        data class Settings(val notificationsEnabled: Boolean, val theme: String)
+
+        val settings = Settings(true, "dark")
+
+        // Encrypt & Store the primitive at the DataStore without exposing coroutines in non-blocking asynchronous way
+        persistManager.putObjectDataStorePreferenceSync("settings_key", settings)
+
+        // because the above is asynchronous let it finish by freezing main thread for some time
+        Thread.sleep(500L)
+
+        // Decrypt & Retrieve the object from DataStore in a blocking synchronous way without exposing coroutines
+        val retrievedSettings: Settings? = persistManager.getObjectDataStorePreferenceSync("settings_key")
 
         // Assertions
         assertNotNull(retrievedSettings)

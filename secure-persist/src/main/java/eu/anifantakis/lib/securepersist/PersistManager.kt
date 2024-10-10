@@ -15,10 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.lang.reflect.Type
 import kotlin.reflect.KProperty
-import kotlin.reflect.javaType
-import kotlin.reflect.typeOf
 
-class PersistManager(context: Context, keyAlias: String) {
+class PersistManager(context: Context, keyAlias: String = "keyAlias") {
 
     private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias)
     internal val sharedPreferencesManager = SharedPreferencesManager(context)
@@ -228,7 +226,7 @@ class PersistManager(context: Context, keyAlias: String) {
      */
     internal inline fun <reified T> getObjectSharedPreference(key: String): T? {
         return try {
-            val jsonString = sharedPreferencesManager.get(key, "") as String
+            val jsonString = sharedPreferencesManager.get(key, "")
             if (jsonString.isEmpty()) {
                 null
             } else {
@@ -267,7 +265,7 @@ class PersistManager(context: Context, keyAlias: String) {
      */
     internal suspend inline fun <reified T> getObjectDataStorePreference(key: String): T? {
         return try {
-            val encryptedBase64 = dataStoreManager.get(key, "") as String
+            val encryptedBase64 = dataStoreManager.get(key, "")
             if (encryptedBase64.isEmpty()) {
                 null
             } else {
@@ -278,6 +276,49 @@ class PersistManager(context: Context, keyAlias: String) {
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    /**
+     * Saves an object to DataStore by serializing it to JSON and encrypting the JSON string without exposing Coroutines
+     *
+     * @param key The key under which the object will be stored.
+     * @param value The object to be stored.
+     */
+    fun <T> putObjectDataStorePreferenceSync(key: String, value: T) {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                val jsonString = gson.toJson(value)
+                val encryptedData = encryptionManager.encryptData(jsonString)
+                val encryptedBase64 = Base64.encodeToString(encryptedData, Base64.NO_WRAP)
+                dataStoreManager.put(key, encryptedBase64)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Retrieves an object from DataStore by decrypting and deserializing the stored JSON string without exposing Coroutines.
+     *
+     * @param key The key under which the object is stored.
+     * @return The retrieved object, or null if not found or an error occurs.
+     */
+    internal inline fun <reified T> getObjectDataStorePreferenceSync(key: String): T? {
+        return runBlocking {
+            try {
+                val encryptedBase64 = dataStoreManager.get(key, "")
+                if (encryptedBase64.isEmpty()) {
+                    null
+                } else {
+                    val encryptedData = Base64.decode(encryptedBase64, Base64.NO_WRAP)
+                    val decryptedJson = encryptionManager.decryptData(encryptedData)
+                    gson.fromJson<T>(decryptedJson, object : TypeToken<T>() {}.type)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
         }
     }
 }
