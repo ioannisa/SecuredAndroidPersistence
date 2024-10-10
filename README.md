@@ -169,7 +169,7 @@ val value: String = persistManager.decryptDataStorePreferenceSync("key", "defaul
 
 
 
-#### Storing and retrieving Object:
+## Storing and retrieving Object:
 
 This is a sample object
 ```kotlin
@@ -182,7 +182,7 @@ data class User(
 val user = User(1, "John Doe", "john.doe@example.com")
 ```
 
-##### Securely Storing and Retrieving using SharedPreferences:
+#### Securely Storing and Retrieving using SharedPreferences:
 ```kotlin
 // encrypt and store using SharedPreferences
 persistManager.putObjectSharedPreference("user_key", user)
@@ -194,7 +194,7 @@ retrievedUser?.let {
 }
 ```
 
-##### Securely Storing and Retrieving using DataStore:
+#### Securely Storing and Retrieving using DataStore:
 ```kotlin
 // store using DataStore
 CoroutineScope(Dispatchers.IO).launch {
@@ -211,7 +211,7 @@ CoroutineScope(Dispatchers.IO).launch {
 ```
 
 
-#### SharedPreferences Property Delegation
+## SharedPreferences Property Delegation
 
 Use Kotlin **property delegatio**n for encrypted `SharedPreferences`, providing a clean and intuitive way to handle your encrypted preferences.
 
@@ -238,7 +238,7 @@ val storedValue = secureString
 ```
 
 
-##### Property Delegation on Custom Types
+#### Property Delegation on Custom Types
 ```kotlin
 data class User(var id: Int, var name: String, var email: String)
 
