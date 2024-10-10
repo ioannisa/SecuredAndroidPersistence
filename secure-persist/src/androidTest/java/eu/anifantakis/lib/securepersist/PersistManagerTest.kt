@@ -107,19 +107,19 @@ class PersistManagerTest {
 
     @Test
     fun testSharedPreferencePropertyDelegationCustomType() {
-        data class User(var id: Int, var name: String, var email: String)
+data class User(var id: Int, var name: String, var email: String)
 
-        val authInfo = User(
-            id = 1,
-            name = "John",
-            email = "john.doe@example.com"
-        )
+val authInfo = User(
+    id = 1,
+    name = "John",
+    email = "john.doe@example.com"
+)
 
-        val user1 by persistManager.preference(authInfo)
-        user1.name = "george"
+val user1 by persistManager.preference(authInfo)
+user1.name = "george"
 
-        val user2 by persistManager.preference(authInfo)
-        assertEquals(user2.name, user1.name)
+val user2 by persistManager.preference(authInfo)
+assertEquals(user2.name, user1.name)
     }
 
     @Test

@@ -29,7 +29,13 @@ class EncryptionManager : IEncryptionManager {
 
     companion object {
         private const val KEYSTORE_TYPE = "AndroidKeyStore"
-        private const val CIPHER_TRANSFORMATION = "AES/GCM/NoPadding"
+
+        private const val KEY_ALGORITHM: String = KeyProperties.KEY_ALGORITHM_AES
+        private const val BLOCK_MODE: String = KeyProperties.BLOCK_MODE_GCM
+        private const val ENCRYPTION_PADDING: String = KeyProperties.ENCRYPTION_PADDING_NONE
+
+        private const val KEY_SIZE: Int = 256
+        private const val CIPHER_TRANSFORMATION = "$KEY_ALGORITHM/$BLOCK_MODE/$ENCRYPTION_PADDING"
         private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
         private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
 
@@ -39,8 +45,8 @@ class EncryptionManager : IEncryptionManager {
          * @return The generated secret key.
          */
         fun generateExternalKey(): SecretKey {
-            val keyGenerator = KeyGenerator.getInstance("AES")
-            keyGenerator.init(256)
+            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM)
+            keyGenerator.init(KEY_SIZE)
             return keyGenerator.generateKey()
         }
 
@@ -169,9 +175,11 @@ class EncryptionManager : IEncryptionManager {
          */
         fun decodeSecretKey(encodedKey: String): SecretKey {
             val decodedKey = Base64.decode(encodedKey, Base64.NO_WRAP)
-            return SecretKeySpec(decodedKey, 0, decodedKey.size, "AES")
+            return SecretKeySpec(decodedKey, 0, decodedKey.size, KEY_ALGORITHM)
         }
     }
+
+
 
     /**
      * Constructor for EncryptionManager using the Android KeyStore.
@@ -189,14 +197,14 @@ class EncryptionManager : IEncryptionManager {
             this.secretKey = keyFromStore
         } else {
             // Key not found, generate a new one
-            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_TYPE)
+            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM, KEYSTORE_TYPE)
             val keyGenParameterSpec = KeyGenParameterSpec.Builder(
                 keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256) // Using 256-bit key for strong encryption
+                .setBlockModes(BLOCK_MODE)
+                .setEncryptionPaddings(ENCRYPTION_PADDING)
+                .setKeySize(KEY_SIZE)
                 .build()
             keyGenerator.init(keyGenParameterSpec)
             keyGenerator.generateKey()

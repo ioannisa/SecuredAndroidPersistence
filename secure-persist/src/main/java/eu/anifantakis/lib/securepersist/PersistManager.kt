@@ -8,6 +8,11 @@ import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import eu.anifantakis.lib.securepersist.internal.DataStoreManager
 import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KProperty
 
 class PersistManager(context: Context, keyAlias: String) {
@@ -94,6 +99,31 @@ class PersistManager(context: Context, keyAlias: String) {
     }
 
     /**
+     * Encrypts and saves a value to DataStore without using coroutines.
+     *
+     * @param key The key to store the value under.
+     * @param value The value to store.
+     */
+    fun <T> encryptDataStorePreferenceSync(key: String, value: T) {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            encryptDataStorePreference(key, value)
+        }
+    }
+
+    /**
+     * Decrypts and retrieves a value from DataStore without using coroutines.
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @return The decrypted value.
+     */
+    fun <T> decryptDataStorePreferenceSync(key: String, defaultValue: T): T {
+        return runBlocking {
+            decryptDataStorePreference(key, defaultValue)
+        }
+    }
+
+    /**
      * Deletes a value from DataStore.
      *
      * @param key The key to delete the value under.
@@ -120,7 +150,7 @@ class PersistManager(context: Context, keyAlias: String) {
                 defaultValue
             } else {
                 when (defaultValue) {
-                    is Boolean, is Int, is Float, is Long, is String -> {
+                    is Boolean, is Int, is Float, is Long, is Double, is String -> {
                         persist.decryptSharedPreference(preferenceKey, defaultValue)
                     }
                     else -> {
@@ -134,7 +164,7 @@ class PersistManager(context: Context, keyAlias: String) {
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             val preferenceKey = key ?: property.name
             when (value) {
-                is Boolean, is Int, is Float, is Long, is String -> {
+                is Boolean, is Int, is Float, is Long, is Double, is String -> {
                     persist.encryptSharedPreference(preferenceKey, value)
                 }
                 else -> {
@@ -145,6 +175,7 @@ class PersistManager(context: Context, keyAlias: String) {
             }
         }
     }
+
 
     /**
      * Uses delegation to set and get encrypted SharedPreferences.

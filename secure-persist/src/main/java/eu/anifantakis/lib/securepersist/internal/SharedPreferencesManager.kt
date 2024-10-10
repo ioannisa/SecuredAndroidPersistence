@@ -5,11 +5,13 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.google.gson.Gson
 import kotlin.reflect.KProperty
 
 internal class SharedPreferencesManager(context: Context) {
 
     private val sharedPreferences: SharedPreferences
+    private val gson = Gson()
 
     init {
         // Create or retrieve the MasterKey for encryption
@@ -34,16 +36,31 @@ internal class SharedPreferencesManager(context: Context) {
      * @param value The value to store.
      */
     fun <T> put(key: String, value: T) {
-        sharedPreferences.edit().apply {
-            when (value) {
-                is Boolean -> putBoolean(key, value)
-                is Int -> putInt(key, value)
-                is Float -> putFloat(key, value)
-                is Long -> putLong(key, value)
-                is String -> putString(key, value)
-                else -> throw IllegalArgumentException("Unsupported type")
+        when (value) {
+            is Boolean, is Int, is Float, is Long, is String -> {
+                sharedPreferences.edit(commit = true) {
+                    when (value) {
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Float -> putFloat(key, value)
+                        is Long -> putLong(key, value)
+                        is String -> putString(key, value)
+                    }
+                }
             }
-        }.apply()
+            is Double -> {
+                sharedPreferences.edit(commit = true) {
+                    putString(key, value.toString())
+                }
+            }
+            else -> {
+                // Serialize complex types to JSON string
+                val jsonString = gson.toJson(value)
+                sharedPreferences.edit(commit = true) {
+                    putString(key, jsonString)
+                }
+            }
+        }
     }
 
     /**
@@ -61,7 +78,19 @@ internal class SharedPreferencesManager(context: Context) {
             is Float -> sharedPreferences.getFloat(key, defaultValue) as T
             is Long -> sharedPreferences.getLong(key, defaultValue) as T
             is String -> sharedPreferences.getString(key, defaultValue) as T
-            else -> throw IllegalArgumentException("Unsupported type")
+            is Double -> {
+                val stringValue = sharedPreferences.getString(key, null)
+                stringValue?.toDouble() as T? ?: defaultValue
+            }
+            else -> {
+                // Deserialize JSON string back to object
+                val jsonString = sharedPreferences.getString(key, null) ?: return defaultValue
+                try {
+                    gson.fromJson(jsonString, defaultValue!!::class.java) as T
+                } catch (e: Exception) {
+                    defaultValue
+                }
+            }
         }
     }
 
@@ -71,7 +100,7 @@ internal class SharedPreferencesManager(context: Context) {
      * @param key The key to delete the value under.
      */
     fun delete(key: String) {
-        sharedPreferences.edit {
+        sharedPreferences.edit(commit = true) {
             remove(key)
         }
     }

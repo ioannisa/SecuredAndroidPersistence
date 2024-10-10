@@ -1,14 +1,9 @@
 package eu.anifantakis.lib.securepersist.internal
 
 import android.content.Context
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -19,6 +14,7 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
 
     // Use the same DataStore instance across all calls
     private val dataStore = context.dataStore
+    private val gson = Gson()
 
     /**
      * Stores a value in DataStore.
@@ -26,19 +22,24 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
      * @param key The key to store the value under.
      * @param value The value to store.
      */
-    @Suppress("UNCHECKED_CAST")
     suspend fun <T> put(key: String, value: T) {
-        val preferencesKey: Preferences.Key<T> = when (value) {
-            is Boolean -> booleanPreferencesKey(key) as Preferences.Key<T>
-            is Int -> intPreferencesKey(key) as Preferences.Key<T>
-            is Float -> floatPreferencesKey(key) as Preferences.Key<T>
-            is Long -> longPreferencesKey(key) as Preferences.Key<T>
-            is String -> stringPreferencesKey(key) as Preferences.Key<T>
-            else -> throw IllegalArgumentException("Unsupported type")
+        val preferencesKey: Preferences.Key<Any> = when (value) {
+            is Boolean -> booleanPreferencesKey(key)
+            is Int -> intPreferencesKey(key)
+            is Float -> floatPreferencesKey(key)
+            is Long -> longPreferencesKey(key)
+            is String -> stringPreferencesKey(key)
+            is Double -> doublePreferencesKey(key)
+            else -> stringPreferencesKey(key)
+        } as Preferences.Key<Any>
+
+        val storedValue: Any = when (value) {
+            is Boolean, is Int, is Float, is Long, is String, is Double -> value
+            else -> gson.toJson(value)
         }
 
         dataStore.edit { preferences ->
-            preferences[preferencesKey] = value
+            preferences[preferencesKey] = storedValue
         }
     }
 
@@ -51,23 +52,33 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
      */
     @Suppress("UNCHECKED_CAST")
     suspend fun <T : Any> get(key: String, defaultValue: T): T {
-        val preferencesKey: Preferences.Key<*> = when (defaultValue) {
+        val preferencesKey: Preferences.Key<Any> = when (defaultValue) {
             is Boolean -> booleanPreferencesKey(key)
             is Int -> intPreferencesKey(key)
             is Float -> floatPreferencesKey(key)
             is Long -> longPreferencesKey(key)
             is String -> stringPreferencesKey(key)
-            else -> throw IllegalArgumentException("Unsupported type")
-        }
+            is Double -> doublePreferencesKey(key)
+            else -> stringPreferencesKey(key)
+        } as Preferences.Key<Any>
 
         val preferences = dataStore.data.map { preferences ->
+            val storedValue = preferences[preferencesKey]
             when (defaultValue) {
-                is Boolean -> preferences[preferencesKey as Preferences.Key<Boolean>] ?: defaultValue
-                is Int -> preferences[preferencesKey as Preferences.Key<Int>] ?: defaultValue
-                is Float -> preferences[preferencesKey as Preferences.Key<Float>] ?: defaultValue
-                is Long -> preferences[preferencesKey as Preferences.Key<Long>] ?: defaultValue
-                is String -> preferences[preferencesKey as Preferences.Key<String>] ?: defaultValue
-                else -> throw IllegalArgumentException("Unsupported type")
+                is Boolean -> storedValue as? Boolean ?: defaultValue
+                is Int -> storedValue as? Int ?: defaultValue
+                is Float -> storedValue as? Float ?: defaultValue
+                is Long -> storedValue as? Long ?: defaultValue
+                is String -> storedValue as? String ?: defaultValue
+                is Double -> storedValue as? Double ?: defaultValue
+                else -> {
+                    val jsonString = storedValue as? String ?: return@map defaultValue
+                    try {
+                        gson.fromJson(jsonString, defaultValue::class.java) as T
+                    } catch (e: Exception) {
+                        defaultValue
+                    }
+                }
             }
         }.first()
 
