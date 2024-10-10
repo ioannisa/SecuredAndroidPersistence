@@ -264,7 +264,7 @@ for any other type the library will attempt to serialize the given input.
 | Boolean   | Yes                | No                        |
 | Int       | Yes                | No                        |
 | Float     | Yes                | No                        |
-| Long      | Yes                | Yes                       |
+| Long      | No                 | Yes                       |
 | Double    | Yes                | No                        |
 | String    | Yes                | No                        |
 | Custom Objects (e.g., Data Classes) | No | Yes             |
