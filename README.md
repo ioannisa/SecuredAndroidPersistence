@@ -58,7 +58,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.1.2")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.1.3-beta")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) so this library is able to download
@@ -240,19 +240,22 @@ val storedValue = secureString
 
 #### Property Delegation on Custom Types
 ```kotlin
-data class User(var id: Int, var name: String, var email: String)
-
-val authInfo = User(
-    id = 1,
-    name = "John",
-    email = "john.doe@example.com"
+data class AuthInfo(
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val userId: Int = 0
 )
 
-val user1 by persistManager.preference(authInfo)
-user1.name = "george"
+// create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
+var authInfo1 by persistManager.preference("authInfoKey", AuthInfo())
+// update authInfo1 with new accessToken
+authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
-val user2 by persistManager.preference(authInfo)
-assertEquals(user2.name, user1.name)
+// retrieve authInfo2 from "authInfoKey"
+val authInfo2 by persistManager.preference("authInfoKey", AuthInfo())
+
+// Assertions
+assertEquals(authInfo2.accessToken, "newAccessToken")
 ```
 
 
