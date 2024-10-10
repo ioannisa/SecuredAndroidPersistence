@@ -103,9 +103,9 @@ persistManager.deleteSharedPreference("key1")
 ```
 
 
-#### Securely Storing and Retrieving Primitive Types with DataStore
+## Securely Storing and Retrieving Primitive Types with DataStore
 
-##### Option 1 - Accessing DataStore with coroutines
+### Option 1 - Accessing DataStore with coroutines
 
 Related functions:
 * `encryptDataStorePreference`
@@ -138,14 +138,14 @@ CoroutineScope(Dispatchers.IO).launch {
 }
 ```
 
-###### Note on Coroutines
+##### Note on Coroutines
 * **Dispatchers.IO:** Used for IO-bound operations.
 * **CoroutineScope:** Manages the lifecycle of coroutines. Ensure you handle coroutine scopes appropriately to avoid memory leaks.
  
 ###  Complex Objects
 You can store and retrieve complex objects by serializing them to JSON and encrypting the JSON string.
 
-##### Option 2 - Accessing DataStore Without coroutines
+### Option 2 - Accessing DataStore Without coroutines
 
 Related functions:
 * `encryptDataStorePreferenceSync`
