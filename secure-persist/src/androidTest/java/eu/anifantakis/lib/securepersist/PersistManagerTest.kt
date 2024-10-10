@@ -107,19 +107,22 @@ class PersistManagerTest {
 
     @Test
     fun testSharedPreferencePropertyDelegationCustomType() {
-data class User(var id: Int, var name: String, var email: String)
+        data class AuthInfo(
+            val accessToken: String = "",
+            val refreshToken: String = "",
+            val userId: Int = 0
+        )
 
-val authInfo = User(
-    id = 1,
-    name = "John",
-    email = "john.doe@example.com"
-)
+        // create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
+        var authInfo1 by persistManager.preference("authInfoKey", AuthInfo())
+        // update authInfo1 with new accessToken
+        authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
-val user1 by persistManager.preference(authInfo)
-user1.name = "george"
+        // retrieve authInfo2 from "authInfoKey"
+        val authInfo2 by persistManager.preference("authInfoKey", AuthInfo())
 
-val user2 by persistManager.preference(authInfo)
-assertEquals(user2.name, user1.name)
+        // Assertions
+        assertEquals(authInfo2.accessToken, "newAccessToken")
     }
 
     @Test

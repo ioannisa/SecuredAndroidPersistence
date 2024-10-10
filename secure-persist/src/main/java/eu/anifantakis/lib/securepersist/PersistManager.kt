@@ -13,7 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.lang.reflect.Type
 import kotlin.reflect.KProperty
+import kotlin.reflect.javaType
+import kotlin.reflect.typeOf
 
 class PersistManager(context: Context, keyAlias: String) {
 
@@ -141,11 +144,13 @@ class PersistManager(context: Context, keyAlias: String) {
         private val persist: PersistManager,
         private val defaultValue: T,
         private val key: String? = null,
+        private val type: Type,
         private val gson: Gson = persist.gson
     ) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            val preferenceKey = key ?: property.name
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             val storedValue = persist.decryptSharedPreference(preferenceKey, "")
+
             return if (storedValue.isEmpty()) {
                 defaultValue
             } else {
@@ -154,15 +159,15 @@ class PersistManager(context: Context, keyAlias: String) {
                         persist.decryptSharedPreference(preferenceKey, defaultValue)
                     }
                     else -> {
-                        // Deserialize JSON string to object
-                        gson.fromJson(storedValue, object : TypeToken<T>() {}.type)
+                        // Deserialize JSON string to object using the provided type
+                        gson.fromJson(storedValue, type) as T
                     }
                 }
             }
         }
 
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-            val preferenceKey = key ?: property.name
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             when (value) {
                 is Boolean, is Int, is Float, is Long, is Double, is String -> {
                     persist.encryptSharedPreference(preferenceKey, value)
@@ -184,21 +189,18 @@ class PersistManager(context: Context, keyAlias: String) {
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedPreference instance.
      */
-    fun <T> preference(defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue)
+    inline fun <reified T> preference(defaultValue: T): EncryptedPreference<T> = preference(null, defaultValue)
 
     /**
-     * Uses delegation to set and get encrypted SharedPreferences and sets the key to the property name.
+     * Uses delegation to set and get encrypted SharedPreferences with a specific key.
      *
      * @param key The key to store the value under.
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedPreference instance.
      */
-    fun <T> preference(key: String = "", defaultValue: T): EncryptedPreference<T> {
-        return if (key.trim().isEmpty()) {
-            EncryptedPreference(this, defaultValue, key)
-        } else {
-            EncryptedPreference(this, defaultValue)
-        }
+    inline fun <reified T> preference(key: String? = null, defaultValue: T): EncryptedPreference<T> {
+        val type: Type = object : TypeToken<T>() {}.type
+        return EncryptedPreference(this, defaultValue, key, type)
     }
 
     // Methods for handling complex objects in SharedPreferences
