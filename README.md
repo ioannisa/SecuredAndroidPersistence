@@ -247,12 +247,9 @@ val flag: Boolean = persistManager.decryptDataStorePreference("key3", false)
 persistManager.deleteDataStorePreference("key2")
 ```
 
-# EncryptionManager
-`EncryptionManager` provides additional functionality for encrypting and decrypting raw data, files, and complex objects.
+## DataTypes Supported
+`PersistnManager` and `EncryptionManager` provide support to the following data types:
 
-It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
-
-Currently, the EncryptionManager will encrypt and decrypt **FILES** and the following types:
 * `Boolean`
 * `Int`
 * `Float`
@@ -274,6 +271,10 @@ for any other type the library will attempt to serialize the given input.
 
 Note: Custom objects, such as data classes, are not directly supported but are handled through serialization.
 
+# EncryptionManager
+`EncryptionManager`  provides additional functionality for encrypting and decrypting raw data, files, and complex objects.
+
+It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
 
 ### Initialization
 
