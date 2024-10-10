@@ -58,7 +58,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:1.1.1")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:1.1.2")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) so this library is able to download
@@ -256,12 +256,24 @@ Currently, the EncryptionManager will encrypt and decrypt **FILES** and the foll
 * `Boolean`
 * `Int`
 * `Float`
+* `Double`
 * `Long`
 * `String`
 
-for any other type it will throw an `IllegalArgumentException("Unsupported type")` exception.
+for any other type the library will attempt to serialize the given input.
 
-So the `EncryptionManager` currently accepts the types that are also accepted on `SharedPreferences` and `DataStore`.
+| Data Type | Supported Directly | Handled via Serialization |
+|-----------|:------------------:|:-------------------------:|
+| Boolean   | Yes                | N/A                       |
+| Int       | Yes                | N/A                       |
+| Float     | Yes                | N/A                       |
+| Long      | Yes                | N/A                       |
+| Double    | Yes                | N/A                       |
+| String    | Yes                | N/A                       |
+| Custom Objects (e.g., Data Classes) | No | Yes             |
+
+Note: Custom objects, such as data classes, are not directly supported but are handled through serialization.
+
 
 ### Initialization
 
