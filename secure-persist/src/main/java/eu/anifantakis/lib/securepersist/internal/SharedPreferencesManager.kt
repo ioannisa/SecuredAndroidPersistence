@@ -6,9 +6,8 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.gson.Gson
-import kotlin.reflect.KProperty
 
-internal class SharedPreferencesManager(context: Context) {
+class SharedPreferencesManager(context: Context) {
 
     private val sharedPreferences: SharedPreferences
     private val gson = Gson()
@@ -104,40 +103,4 @@ internal class SharedPreferencesManager(context: Context) {
             remove(key)
         }
     }
-
-    /**
-     * Class to handle encrypted preferences using property delegation.
-     */
-    internal class EncryptedPreference<T>(
-        private val sharedPreferencesManager: SharedPreferencesManager,
-        private val defaultValue: T,
-        private val key: String? = null
-    ) {
-        operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            val preferenceKey = key ?: property.name
-            return sharedPreferencesManager.get(preferenceKey, defaultValue)
-        }
-
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-            val preferenceKey = key ?: property.name
-            sharedPreferencesManager.put(preferenceKey, value)
-        }
-    }
-
-    /**
-     * Creates an EncryptedPreference with the property name as the key.
-     *
-     * @param defaultValue The default value to return if the key does not exist.
-     * @return An EncryptedPreference instance.
-     */
-    fun <T> preference(defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue)
-
-    /**
-     * Creates an EncryptedPreference with a specific key.
-     *
-     * @param key The key to store the value under.
-     * @param defaultValue The default value to return if the key does not exist.
-     * @return An EncryptedPreference instance.
-     */
-    fun <T> preference(key: String, defaultValue: T): EncryptedPreference<T> = EncryptedPreference(this, defaultValue, key)
 }

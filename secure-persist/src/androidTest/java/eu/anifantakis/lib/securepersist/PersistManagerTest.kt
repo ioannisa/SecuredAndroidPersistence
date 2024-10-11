@@ -23,22 +23,22 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testEncryptSharedPreference() {
+    fun testPutEncryptedSharedPreference() {
         val key = "sharedPrefKey"
         val value = "testValue"
 
-        persistManager.encryptSharedPreference(key, value)
-        val decryptedValue: String = persistManager.decryptSharedPreference(key, "")
+        persistManager.sharedPrefs.put(key, value)
+        val decryptedValue: String = persistManager.sharedPrefs.get(key, "")
 
         assertEquals(value, decryptedValue)
     }
 
     @Test
-    fun testDecryptSharedPreferenceWithDefault() {
+    fun testGetEncryptedSharedPreferenceWithDefault() {
         val key = "nonExistentKey"
         val defaultValue = "default"
 
-        val retrievedValue: String = persistManager.decryptSharedPreference(key, defaultValue)
+        val retrievedValue: String = persistManager.sharedPrefs.get(key, defaultValue)
 
         assertEquals(defaultValue, retrievedValue)
     }
@@ -48,9 +48,9 @@ class PersistManagerTest {
         val key = "deleteKey"
         val value = "toBeDeleted"
 
-        persistManager.encryptSharedPreference(key, value)
-        persistManager.deleteSharedPreference(key)
-        val retrievedValue: String = persistManager.decryptSharedPreference(key, "default")
+        persistManager.sharedPrefs.put(key, value)
+        persistManager.sharedPrefs.delete(key)
+        val retrievedValue: String = persistManager.sharedPrefs.get(key, "default")
 
         assertEquals("default", retrievedValue)
     }
@@ -60,8 +60,8 @@ class PersistManagerTest {
         val key = "dataStoreKey"
         val value = "dataStoreValue"
 
-        persistManager.putDataStorePreference(key, value)
-        val retrievedValue: String = persistManager.getDataStorePreference(key, "")
+        persistManager.dataStorePrefs.put(key, value)
+        val retrievedValue: String = persistManager.dataStorePrefs.get(key, "")
 
         assertEquals(value, retrievedValue)
     }
@@ -71,25 +71,25 @@ class PersistManagerTest {
         val key = "encryptedDataStoreKey"
         val value = "encryptedDataStoreValue"
 
-        persistManager.encryptDataStorePreference(key, value)
-        val retrievedValue: String = persistManager.decryptDataStorePreference(key, "")
+        persistManager.dataStorePrefs.put(key, value)
+        val retrievedValue: String = persistManager.dataStorePrefs.get(key, "")
 
         assertEquals(value, retrievedValue)
     }
 
     @Test
-    fun testEncryptAndDecryptDataStorePreferenceSync() {
+    fun testEncryptAndGetDataStorePreferenceDirect() {
         val key = "encryptedDataStoreKey"
         val value = "encryptedDataStoreValue"
 
         // Encrypt & Store the primitive at the DataStore without exposing coroutines in non-blocking asynchronous way
-        persistManager.encryptDataStorePreferenceSync(key, value)
+        persistManager.dataStorePrefs.putDirect(key, value)
 
         // because the above is asynchronous let it finish by freezing main thread for some time
         Thread.sleep(500L)
 
         // Decrypt & Retrieve the primitive from DataStore in a blocking synchronous way without exposing coroutines
-        val retrievedValue: String = persistManager.decryptDataStorePreferenceSync(key, "")
+        val retrievedValue: String = persistManager.dataStorePrefs.getDirect(key, "")
 
         assertEquals(value, retrievedValue)
     }
@@ -99,16 +99,16 @@ class PersistManagerTest {
         val key = "deleteDataStoreKey"
         val value = "toBeDeleted"
 
-        persistManager.putDataStorePreference(key, value)
-        persistManager.deleteDataStorePreference(key)
-        val retrievedValue: String = persistManager.getDataStorePreference(key, "default")
+        persistManager.dataStorePrefs.put(key, value)
+        persistManager.dataStorePrefs.delete(key)
+        val retrievedValue: String = persistManager.dataStorePrefs.get(key, "default")
 
         assertEquals("default", retrievedValue)
     }
 
     @Test
     fun testSharedPreferencePropertyDelegationPrimitive() {
-        var myStr by persistManager.preference("defaultString")
+        var myStr by persistManager.encryptedSharedPreferenceDelegate("defaultString")
 
         myStr = "newStringValue"
         assertEquals("newStringValue", myStr)
@@ -116,7 +116,7 @@ class PersistManagerTest {
 
     @Test
     fun testDataStorePreferencePropertyDelegationPrimitive() = runBlocking {
-        var myStr by persistManager.preference("dataStoreString", "defaultString")
+        var myStr by persistManager.encryptedSharedPreferenceDelegate("dataStoreString", "defaultString")
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
@@ -131,12 +131,12 @@ class PersistManagerTest {
         )
 
         // create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
-        var authInfo1 by persistManager.preference("authInfoKey", AuthInfo())
+        var authInfo1 by persistManager.encryptedSharedPreferenceDelegate(AuthInfo(), "authInfoKey")
         // update authInfo1 with new accessToken
         authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
         // retrieve authInfo2 from "authInfoKey"
-        val authInfo2 by persistManager.preference("authInfoKey", AuthInfo())
+        val authInfo2 by persistManager.encryptedSharedPreferenceDelegate(AuthInfo(), "authInfoKey")
 
         // Assertions
         assertEquals(authInfo2.accessToken, "newAccessToken")
@@ -150,16 +150,16 @@ class PersistManagerTest {
         val user = User(1, "John Doe", "john.doe@example.com")
 
         // Store the object
-        persistManager.putObjectSharedPreference("user_key", user)
+        persistManager.sharedPrefs.put("user_key", user)
 
         // Retrieve the object
-        val retrievedUser: User? = persistManager.getObjectSharedPreference("user_key")
+        val retrievedUser: User = persistManager.sharedPrefs.get("user_key", User(0, "", ""))
 
         // Assertions
         assertNotNull(retrievedUser)
-        assertEquals(user.id, retrievedUser?.id)
-        assertEquals(user.name, retrievedUser?.name)
-        assertEquals(user.email, retrievedUser?.email)
+        assertEquals(user.id, retrievedUser.id)
+        assertEquals(user.name, retrievedUser.name)
+        assertEquals(user.email, retrievedUser.email)
     }
 
     @Test
@@ -170,15 +170,15 @@ class PersistManagerTest {
         val settings = Settings(true, "dark")
 
         // Store the object
-        persistManager.putObjectDataStorePreference("settings_key", settings)
+        persistManager.dataStorePrefs.put("settings_key", settings)
 
         // Retrieve the object
-        val retrievedSettings: Settings? = persistManager.getObjectDataStorePreference("settings_key")
+        val retrievedSettings: Settings = persistManager.dataStorePrefs.get("settings_key", Settings(false, ""))
 
         // Assertions
         assertNotNull(retrievedSettings)
-        assertEquals(settings.notificationsEnabled, retrievedSettings?.notificationsEnabled)
-        assertEquals(settings.theme, retrievedSettings?.theme)
+        assertEquals(settings.notificationsEnabled, retrievedSettings.notificationsEnabled)
+        assertEquals(settings.theme, retrievedSettings.theme)
     }
 
     @Test
@@ -189,17 +189,17 @@ class PersistManagerTest {
         val settings = Settings(true, "dark")
 
         // Encrypt & Store the primitive at the DataStore without exposing coroutines in non-blocking asynchronous way
-        persistManager.putObjectDataStorePreferenceSync("settings_key", settings)
+        persistManager.dataStorePrefs.putDirect("settings_key", settings)
 
         // because the above is asynchronous let it finish by freezing main thread for some time
         Thread.sleep(500L)
 
         // Decrypt & Retrieve the object from DataStore in a blocking synchronous way without exposing coroutines
-        val retrievedSettings: Settings? = persistManager.getObjectDataStorePreferenceSync("settings_key")
+        val retrievedSettings: Settings = persistManager.dataStorePrefs.getDirect("settings_key", Settings(false, ""))
 
         // Assertions
         assertNotNull(retrievedSettings)
-        assertEquals(settings.notificationsEnabled, retrievedSettings?.notificationsEnabled)
-        assertEquals(settings.theme, retrievedSettings?.theme)
+        assertEquals(settings.notificationsEnabled, retrievedSettings.notificationsEnabled)
+        assertEquals(settings.theme, retrievedSettings.theme)
     }
 }

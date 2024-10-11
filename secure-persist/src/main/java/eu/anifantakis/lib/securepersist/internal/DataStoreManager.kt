@@ -5,24 +5,107 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 private val Context.dataStore by preferencesDataStore("encrypted_datastore")
 
-internal class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager) {
+class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager) {
 
-    // Use the same DataStore instance across all calls
     private val dataStore = context.dataStore
     private val gson = Gson()
 
     /**
-     * Stores a value in DataStore.
+     * Retrieves a value from DataStore.
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @param useEncryption Whether to use encryption for the value (default true)
+     * @return The retrieved value.
+     */
+    suspend fun <T : Any> get(key: String, defaultValue: T, useEncryption: Boolean = true): T {
+        return if (useEncryption) {
+            getEncrypted(key, defaultValue)
+        }
+        else {
+            get(key, defaultValue)
+        }
+    }
+
+    /**
+     * Retrieves a value from DataStore without using coroutines.
+     * This is BLOCKING function
+     *
+     * @param key The key to retrieve the value under.
+     * @param defaultValue The default value to return if the key does not exist.
+     * @param useEncryption Whether to use encryption for the value (default true)
+     * @return The decrypted value.
+     */
+    fun <T: Any> getDirect(key: String, defaultValue: T, useEncryption: Boolean = true): T {
+        return runBlocking {
+            get(key, defaultValue, useEncryption)
+        }
+    }
+
+    /**
+     * Saves a value to DataStore.
      *
      * @param key The key to store the value under.
      * @param value The value to store.
+     * @param useEncryption Whether to use encryption for the value (default true)
      */
-    suspend fun <T> put(key: String, value: T) {
+    suspend fun <T> put(key: String, value: T, useEncryption: Boolean = true) {
+        if (useEncryption) {
+            putEncrypted(key, value)
+        } else {
+            put(key, value)
+        }
+    }
+
+    /**
+     * Saves a value to DataStore without using coroutines.
+     * This function is NON-BLOCKING
+     *
+     * @param key The key to store the value under.
+     * @param value The value to store.
+     * @param useEncryption Whether to use encryption for the value (default true)
+     */
+    fun <T> putDirect(key: String, value: T, useEncryption: Boolean = true) {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            put(key, value, useEncryption)
+        }
+    }
+
+    /**
+     * Deletes a value from DataStore.
+     *
+     * @param key The key to delete the value under.
+     */
+    suspend fun delete(key: String) {
+        val dataKey = stringPreferencesKey(key)
+        dataStore.edit { preferences ->
+            preferences.remove(dataKey)
+        }
+    }
+
+    /**
+     * Deletes a value from DataStore without using coroutines.
+     * This function is NON-BLOCKING
+     *
+     * @param key The key to delete the value under.
+     */
+    fun deleteDirect(key: String) {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            delete(key)
+        }
+    }
+
+    private suspend fun <T> put(key: String, value: T) {
         val preferencesKey: Preferences.Key<Any> = when (value) {
             is Boolean -> booleanPreferencesKey(key)
             is Int -> intPreferencesKey(key)
@@ -43,15 +126,8 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
         }
     }
 
-    /**
-     * Retrieves a value from DataStore.
-     *
-     * @param key The key to retrieve the value under.
-     * @param defaultValue The default value to return if the key does not exist.
-     * @return The retrieved value.
-     */
     @Suppress("UNCHECKED_CAST")
-    suspend fun <T : Any> get(key: String, defaultValue: T): T {
+    private suspend fun <T : Any> get(key: String, defaultValue: T): T {
         val preferencesKey: Preferences.Key<Any> = when (defaultValue) {
             is Boolean -> booleanPreferencesKey(key)
             is Int -> intPreferencesKey(key)
@@ -85,13 +161,7 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
         return preferences as T
     }
 
-    /**
-     * Encrypts and stores a value in DataStore.
-     *
-     * @param key The key to store the value under.
-     * @param value The value to store.
-     */
-    suspend fun <T> putEncrypted(key: String, value: T) {
+    private suspend fun <T> putEncrypted(key: String, value: T) {
         val dataKey = stringPreferencesKey(key)
         val encryptedValue = encryptionManager.encryptValue(value)
         dataStore.edit { preferences ->
@@ -99,30 +169,11 @@ internal class DataStoreManager(context: Context, private val encryptionManager:
         }
     }
 
-    /**
-     * Retrieves and decrypts a value from DataStore.
-     *
-     * @param key The key to retrieve the value under.
-     * @param defaultValue The default value to return if the key does not exist.
-     * @return The decrypted value.
-     */
-    suspend fun <T> getEncrypted(key: String, defaultValue: T): T {
+    private suspend fun <T> getEncrypted(key: String, defaultValue: T): T {
         val dataKey = stringPreferencesKey(key)
         val encryptedValue = dataStore.data.map { preferences ->
             preferences[dataKey]
         }.first() ?: return defaultValue
         return encryptionManager.decryptValue(encryptedValue, defaultValue)
-    }
-
-    /**
-     * Deletes a value from DataStore.
-     *
-     * @param key The key to delete the value under.
-     */
-    suspend fun delete(key: String) {
-        val dataKey = stringPreferencesKey(key)
-        dataStore.edit { preferences ->
-            preferences.remove(dataKey)
-        }
     }
 }

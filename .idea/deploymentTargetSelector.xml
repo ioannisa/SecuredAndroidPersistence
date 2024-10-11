@@ -5,19 +5,19 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="testSharedPreferencePropertyDelegationCustomType()">
+      <SelectionState runConfigName="CustomTypeDelegationDataStoreTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="CustomTypeDelegationTest">
+      <SelectionState runConfigName="PersistManagerTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="PrimitiveDelegationTest">
+      <SelectionState runConfigName="EncryptionManagerTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="testCustomTypePreferenceDelegation()">
+      <SelectionState runConfigName="testSharedPreferencesObject()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="testCustomTypePreferenceDelegationSetKey()">
+      <SelectionState runConfigName="CustomTypeDelegationSharedPreferencesTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

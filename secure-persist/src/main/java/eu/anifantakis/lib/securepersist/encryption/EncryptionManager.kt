@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import com.google.gson.Gson
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -39,6 +40,8 @@ class EncryptionManager : IEncryptionManager {
         private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
         private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
 
+        private val gson = Gson()
+
         /**
          * Generates a new external secret key.
          *
@@ -58,7 +61,7 @@ class EncryptionManager : IEncryptionManager {
          * @return The encrypted value as a Base64 string.
          */
         fun <T> encryptValue(value: T, secretKey: SecretKey): String {
-            val stringValue = value.toString()
+            val stringValue = gson.toJson(value)
             val encryptedData = encryptData(stringValue, secretKey)
             return Base64.encodeToString(encryptedData, Base64.NO_WRAP)
         }
@@ -74,15 +77,8 @@ class EncryptionManager : IEncryptionManager {
         fun <T> decryptValue(encryptedValue: String, defaultValue: T, secretKey: SecretKey): T {
             return try {
                 val encryptedData = Base64.decode(encryptedValue, Base64.NO_WRAP)
-                val decryptedString = decryptData(encryptedData, secretKey)
-                when (defaultValue) {
-                    is Boolean -> decryptedString.toBoolean() as T
-                    is Int -> decryptedString.toInt() as T
-                    is Float -> decryptedString.toFloat() as T
-                    is Long -> decryptedString.toLong() as T
-                    is String -> decryptedString as T
-                    else -> throw IllegalArgumentException("Unsupported type")
-                }
+                val jsonString = decryptData(encryptedData, secretKey)
+                gson.fromJson(jsonString, defaultValue!!::class.java) as T
             } catch (e: Exception) {
                 Log.e("EncryptionManager", "Decryption failed", e)
                 defaultValue
