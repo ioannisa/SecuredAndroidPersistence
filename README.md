@@ -117,6 +117,9 @@ To utilize delegation you can make use of the `encryptedSharedPreferenceDelegate
 // Encrypt and save a shared preference - the name of the variable becomes the key
 var key1 by persistManager.encryptedSharedPreferenceDelegate("secureValue")
 
+// just like that you can update the encrypted shared as if it was a variable
+key1 = "a new value"
+
 // Decrypt and retrieve a shared preference
 // as simple as simply accessing the value
 print(key1)
