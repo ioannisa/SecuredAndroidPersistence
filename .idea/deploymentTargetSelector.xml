@@ -14,10 +14,10 @@
       <SelectionState runConfigName="EncryptionManagerTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="testSharedPreferencesObject()">
+      <SelectionState runConfigName="CustomTypeDelegationSharedPreferencesTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="CustomTypeDelegationSharedPreferencesTest">
+      <SelectionState runConfigName="anotherTestBlocking()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

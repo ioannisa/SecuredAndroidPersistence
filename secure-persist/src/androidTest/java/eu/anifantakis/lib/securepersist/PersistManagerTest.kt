@@ -56,6 +56,17 @@ class PersistManagerTest {
     }
 
     @Test
+    fun anotherTestBlocking() = runBlocking {
+        persistManager.sharedPrefs.put("key1", "secureValue")
+
+        val retrievedValue: String = persistManager.sharedPrefs.get("key1", "")
+
+        persistManager.sharedPrefs.delete("key1")
+
+        assertEquals("secureValue", retrievedValue)
+    }
+
+    @Test
     fun testPutAndGetDataStorePreference() = runBlocking {
         val key = "dataStoreKey"
         val value = "dataStoreValue"
@@ -108,7 +119,7 @@ class PersistManagerTest {
 
     @Test
     fun testSharedPreferencePropertyDelegationPrimitive() {
-        var myStr by persistManager.encryptedSharedPreferenceDelegate("defaultString")
+        var myStr by persistManager.sharedPreferenceDelegate("defaultString")
 
         myStr = "newStringValue"
         assertEquals("newStringValue", myStr)
@@ -116,7 +127,7 @@ class PersistManagerTest {
 
     @Test
     fun testDataStorePreferencePropertyDelegationPrimitive() = runBlocking {
-        var myStr by persistManager.encryptedSharedPreferenceDelegate("dataStoreString", "defaultString")
+        var myStr by persistManager.sharedPreferenceDelegate("dataStoreString", "defaultString")
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
@@ -131,12 +142,12 @@ class PersistManagerTest {
         )
 
         // create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
-        var authInfo1 by persistManager.encryptedSharedPreferenceDelegate(AuthInfo(), "authInfoKey")
+        var authInfo1 by persistManager.sharedPreferenceDelegate(AuthInfo(), "authInfoKey")
         // update authInfo1 with new accessToken
         authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
         // retrieve authInfo2 from "authInfoKey"
-        val authInfo2 by persistManager.encryptedSharedPreferenceDelegate(AuthInfo(), "authInfoKey")
+        val authInfo2 by persistManager.sharedPreferenceDelegate(AuthInfo(), "authInfoKey")
 
         // Assertions
         assertEquals(authInfo2.accessToken, "newAccessToken")

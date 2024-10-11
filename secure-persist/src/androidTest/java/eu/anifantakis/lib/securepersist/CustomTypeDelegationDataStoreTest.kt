@@ -20,7 +20,7 @@ class CustomTypeDelegationDataStoreTest {
     )
 
     class TestClass(persistManager: PersistManager) {
-        var authInfo by persistManager.secureDataStorePreferenceDelegate(AuthInfo())
+        var authInfo by persistManager.dataStoreDelegate(AuthInfo())
     }
 
     @Before
@@ -49,7 +49,7 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testCustomTypeDataStoreDelegated() {
-        val storedAuthInfo by persistManager.secureDataStorePreferenceDelegate(AuthInfo(), "authInfo")
+        val storedAuthInfo by persistManager.dataStoreDelegate(AuthInfo(), "authInfo")
 
         assertEquals("token123", storedAuthInfo.accessToken)
         assertEquals("refresh123", storedAuthInfo.refreshToken)
@@ -58,7 +58,7 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testCustomTypeDataStoreDelegatedChangingValue() {
-        var storedAuthInfo by persistManager.secureDataStorePreferenceDelegate(AuthInfo(), "authInfo")
+        var storedAuthInfo by persistManager.dataStoreDelegate(AuthInfo(), "authInfo")
         storedAuthInfo = storedAuthInfo.copy(accessToken = "accessToken999")
 
         // Because the above is non-blocking lets wait before we assert
@@ -82,7 +82,7 @@ class CustomTypeDelegationDataStoreTest {
     @Test
     fun testCustomTypeDataStoreDelegation() {
         // if no key provided, SharedPreferences uses the variable name as key
-        val authInfo by persistManager.secureDataStorePreferenceDelegate(AuthInfo())
+        val authInfo by persistManager.dataStoreDelegate(AuthInfo())
 
         assertEquals("token123", authInfo.accessToken)
         assertEquals("refresh123", authInfo.refreshToken)
@@ -92,7 +92,7 @@ class CustomTypeDelegationDataStoreTest {
     @Test
     fun testCustomTypeDataStoreDelegationSetKey() {
         // if a key is provided, it will be used by SharedPreference as a key
-        val storedAuthInfo by persistManager.secureDataStorePreferenceDelegate(AuthInfo(), "authInfo")
+        val storedAuthInfo by persistManager.dataStoreDelegate(AuthInfo(), "authInfo")
 
         assertEquals("token123", storedAuthInfo.accessToken)
         assertEquals("refresh123", storedAuthInfo.refreshToken)

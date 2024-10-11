@@ -17,8 +17,6 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
     val dataStorePrefs = DataStoreManager(context, encryptionManager)
     private val gson = Gson()
 
-    // Wrapper for the preference delegate
-
     /**
      * Class to handle encrypted preferences using property delegation.
      */
@@ -70,7 +68,7 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedPreference instance.
      */
-    inline fun <reified T> encryptedSharedPreferenceDelegate(defaultValue: T, key: String? = null): EncryptedPreference<T> {
+    inline fun <reified T> sharedPreferenceDelegate(defaultValue: T, key: String? = null): EncryptedPreference<T> {
         val type: Type = object : TypeToken<T>() {}.type
         return EncryptedPreference(this, defaultValue, key, type)
     }
@@ -102,7 +100,7 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
      * @param defaultValue The default value to return if the key does not exist.
      * @return An EncryptedDataStore instance.
      */
-    inline fun <reified T : Any> secureDataStorePreferenceDelegate(defaultValue: T, key: String? = null): EncryptedDataStore<T> {
+    inline fun <reified T : Any> dataStoreDelegate(defaultValue: T, key: String? = null): EncryptedDataStore<T> {
         return EncryptedDataStore(this, defaultValue, key)
     }
 
