@@ -56,7 +56,7 @@ implementation(project(":secure-persist"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:2.0.0-beta1")
+implementation("com.github.ioannisa:SecuredAndroidPersistence:2.0.0-beta2")
 ```
 
 2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) so this library is able to download
@@ -111,11 +111,11 @@ persistManager.sharedPrefs.delete("key1")
 
 #### Securely utilizing SharedPreferences with Property-Delegation
 
-To utilize delegation you can make use of the `encryptedSharedPreferenceDelegate` function.
+To utilize delegation you can make use of the `sharedPreferenceDelegate` function.
 
 ```kotlin
 // Encrypt and save a shared preference - the name of the variable becomes the key
-var key1 by persistManager.encryptedSharedPreferenceDelegate("secureValue")
+var key1 by persistManager.sharedPreferenceDelegate("secureValue")
 
 // just like that you can update the encrypted shared as if it was a variable
 key1 = "a new value"
@@ -229,12 +229,12 @@ CoroutineScope(Dispatchers.IO).launch {
 
 ### Option 2 - Accessing DataStore Without coroutines
 
+Accessing DataStore Preferences without coroutines happens with the `Direct` version of the same functions that were used in the coroutines approach.
+
 Related functions:
 * `putDirect` (non-blocking)
 * `getDirect` (blocking)
 * `deleteDirect` (non-blocking)
-
-Accessing DataStore Preferences without coroutines happens with the `Direct` version of the same functions that were used in the coroutines approach.
 
 ```kotlin
 // encrypt and store in non blocking way to DataStore the "value" for the given "key"
@@ -246,6 +246,28 @@ val value: String = persistManager.dataStorePrefs.getDirect("key1", "defaultValu
 // deletes the DataStore Preference without using coroutines
 persistManager.dataStorePrefs.deleteDirect("key1")
 ```
+
+#### Securely utilizing DataStore Preferences with Property-Delegation
+
+To utilize delegation you can make use of the `dataStoreDelegate` function. Behind the scenes in the delegated approach the library uses the `putDirect`, `getDirect` and `deleteDiret` functions in order to provide a seamless approach without need to launch coroutines.
+
+```kotlin
+// Encrypt and save a data store preference - the name of the variable becomes the key
+var key1 by persistManager.dataStoreDelegate("secureValue")
+
+// just like that you can update the encrypted preference as if it was a variable
+key1 = "a new value"
+
+// Decrypt and retrieve a shared preference
+// as simple as simply accessing the value
+print(key1)
+
+// To delete a datastore preference has to happen without delegation
+persistManager.sharedPrefs.delete("key1")
+```
+
+
+
 
 
 Storing to `DataStore Preferences` **WITHOUT encryption** performs serialization only for Double and for Complex DataTypes, since DataStore already knows to to store these types, while Double and Complex datatypes get serialized using gson library to get stored.
