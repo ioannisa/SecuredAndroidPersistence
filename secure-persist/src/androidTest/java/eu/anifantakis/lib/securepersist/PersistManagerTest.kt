@@ -119,7 +119,7 @@ class PersistManagerTest {
 
     @Test
     fun testSharedPreferencePropertyDelegationPrimitive() {
-        var myStr by persistManager.sharedPreferenceDelegate("defaultString")
+        var myStr by persistManager.sharedPreference("defaultString")
 
         myStr = "newStringValue"
         assertEquals("newStringValue", myStr)
@@ -127,7 +127,7 @@ class PersistManagerTest {
 
     @Test
     fun testDataStorePreferencePropertyDelegationPrimitive() = runBlocking {
-        var myStr by persistManager.sharedPreferenceDelegate("dataStoreString", "defaultString")
+        var myStr by persistManager.sharedPreference("dataStoreString", "defaultString")
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
@@ -142,12 +142,12 @@ class PersistManagerTest {
         )
 
         // create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
-        var authInfo1 by persistManager.sharedPreferenceDelegate(AuthInfo(), "authInfoKey")
+        var authInfo1 by persistManager.sharedPreference(AuthInfo(), "authInfoKey")
         // update authInfo1 with new accessToken
         authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
         // retrieve authInfo2 from "authInfoKey"
-        val authInfo2 by persistManager.sharedPreferenceDelegate(AuthInfo(), "authInfoKey")
+        val authInfo2 by persistManager.sharedPreference(AuthInfo(), "authInfoKey")
 
         // Assertions
         assertEquals(authInfo2.accessToken, "newAccessToken")
