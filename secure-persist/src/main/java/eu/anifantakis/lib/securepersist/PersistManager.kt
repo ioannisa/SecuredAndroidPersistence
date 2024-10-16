@@ -53,6 +53,12 @@ interface EncryptedPreference <T> {
      * @param value The new value to set.
      */
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
+
+    fun checkRequiredAnnotations(sharedPrefAnnotation: SharedPref?, dataStorePrefAnnotation: DataStorePref?) {
+        if (sharedPrefAnnotation == null || dataStorePrefAnnotation == null) {
+            throw IllegalStateException("@SharedPref and @DataStorePref annotations cannot be used with 'preference' function. Did you mean to use 'annotatedPreference'?")
+        }
+    }
 }
 
 /**
@@ -88,6 +94,11 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
         private val gson: Gson = persist.gson
 
         override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+            checkRequiredAnnotations(
+                property.annotations.filterIsInstance<SharedPref>().firstOrNull(),
+                property.annotations.filterIsInstance<DataStorePref>().firstOrNull()
+            )
+
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             val storedValue = persist.sharedPrefs.get(preferenceKey, "")
 
@@ -107,6 +118,11 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
         }
 
         override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+            checkRequiredAnnotations(
+                property.annotations.filterIsInstance<SharedPref>().firstOrNull(),
+                property.annotations.filterIsInstance<DataStorePref>().firstOrNull()
+            )
+
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             when (value) {
                 is Boolean, is Int, is Float, is Long, is Double, is String -> {
@@ -138,12 +154,22 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
         private val encrypted: Boolean = true
     ) : EncryptedPreference<T> {
         override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+            checkRequiredAnnotations(
+                property.annotations.filterIsInstance<SharedPref>().firstOrNull(),
+                property.annotations.filterIsInstance<DataStorePref>().firstOrNull()
+            )
+
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             val storedValue = persist.dataStorePrefs.getDirect<T>(preferenceKey, defaultValue, encrypted)
             return storedValue
         }
 
         override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+            checkRequiredAnnotations(
+                property.annotations.filterIsInstance<SharedPref>().firstOrNull(),
+                property.annotations.filterIsInstance<DataStorePref>().firstOrNull()
+            )
+
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             persist.dataStorePrefs.putDirect(preferenceKey, value, encrypted)
         }
