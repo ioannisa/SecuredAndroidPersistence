@@ -23,7 +23,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testPutEncryptedSharedPreference() {
+    fun testPutEncryptedDelegatedSharedAnnotatedPreference() {
         val key = "sharedPrefKey"
         val value = "testValue"
 
@@ -34,7 +34,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testGetEncryptedSharedPreferenceWithDefault() {
+    fun testGetEncryptedDelegatedSharedAnnotatedPreferenceWithDefault() {
         val key = "nonExistentKey"
         val defaultValue = "default"
 
@@ -44,7 +44,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testDeleteSharedPreference() {
+    fun testDeleteDelegatedSharedAnnotatedPreference() {
         val key = "deleteKey"
         val value = "toBeDeleted"
 
@@ -67,7 +67,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testPutAndGetDataStorePreference() = runBlocking {
+    fun testPutAndGetDataStoreAnnotatedPreference() = runBlocking {
         val key = "dataStoreKey"
         val value = "dataStoreValue"
 
@@ -78,7 +78,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testEncryptAndDecryptDataStorePreference() = runBlocking {
+    fun testEncryptAndDecryptDataStoreAnnotatedPreference() = runBlocking {
         val key = "encryptedDataStoreKey"
         val value = "encryptedDataStoreValue"
 
@@ -89,7 +89,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testEncryptAndGetDataStorePreferenceDirect() {
+    fun testEncryptAndGetDataStoreAnnotatedPreferenceDirect() {
         val key = "encryptedDataStoreKey"
         val value = "encryptedDataStoreValue"
 
@@ -106,7 +106,7 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testDeleteDataStorePreference() = runBlocking {
+    fun testDeleteDataStoreAnnotatedPreference() = runBlocking {
         val key = "deleteDataStoreKey"
         val value = "toBeDeleted"
 
@@ -118,23 +118,23 @@ class PersistManagerTest {
     }
 
     @Test
-    fun testSharedPreferencePropertyDelegationPrimitive() {
-        var myStr by persistManager.sharedPreference("defaultString")
+    fun testDelegatedSharedAnnotatedPreferencePropertyDelegationPrimitive() {
+        var myStr by persistManager.preference("defaultString")
 
         myStr = "newStringValue"
         assertEquals("newStringValue", myStr)
     }
 
     @Test
-    fun testDataStorePreferencePropertyDelegationPrimitive() = runBlocking {
-        var myStr by persistManager.sharedPreference("dataStoreString", "defaultString")
+    fun testDataStoreAnnotatedPreferencePropertyDelegationPrimitive() = runBlocking {
+        var myStr by persistManager.preference("dataStoreString", "key1")
 
         myStr = "newDataStoreStringValue"
         assertEquals("newDataStoreStringValue", myStr)
     }
 
     @Test
-    fun testSharedPreferencePropertyDelegationCustomType() {
+    fun testDelegatedSharedAnnotatedPreferencePropertyDelegationCustomType() {
         data class AuthInfo(
             val accessToken: String = "",
             val refreshToken: String = "",
@@ -142,19 +142,21 @@ class PersistManagerTest {
         )
 
         // create authInfo1 which is assigned to "authInfoKey" with Default Value AuthInfo()
-        var authInfo1 by persistManager.sharedPreference(AuthInfo(), "authInfoKey")
+        var authInfo1 by persistManager.preference(AuthInfo(), "authInfoKey")
+
+
         // update authInfo1 with new accessToken
         authInfo1 = authInfo1.copy(accessToken = "newAccessToken")
 
         // retrieve authInfo2 from "authInfoKey"
-        val authInfo2 by persistManager.sharedPreference(AuthInfo(), "authInfoKey")
+        val authInfo2 by persistManager.preference(AuthInfo(), "authInfoKey")
 
         // Assertions
         assertEquals(authInfo2.accessToken, "newAccessToken")
     }
 
     @Test
-    fun testSharedPreferencesObject() {
+    fun testDelegatedSharedPreferencesObject() {
         // Define a custom object
         data class User(val id: Int, val name: String, val email: String)
 

@@ -10,16 +10,59 @@ import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
 import java.lang.reflect.Type
 import kotlin.reflect.KProperty
 
-// Annotations
+/**
+ * Annotation to mark a property for storage in SharedPreferences.
+ *
+ * @property key The key to be used for the preference. If empty, the property name will be used.
+ */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class SharedPref(val key: String = "")
 
+
+/**
+ * Annotation to mark a property for storage in DataStore.
+ *
+ * @property key The key to be used for the preference. If empty, the property name will be used.
+ * @property encrypted Whether the preference should be stored encrypted. Defaults to true.
+ */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class DataStorePref(val key: String = "", val encrypted: Boolean = true)
 
+/**
+ * Interface for handling encrypted preferences using property delegation.
+ *
+ * @param T The type of the preference value.
+ */
+interface EncryptedPreference <T> {
+    /**
+     * Retrieves the value of the preference.
+     *
+     * @param thisRef The reference to the property owner.
+     * @param property The property metadata.
+     * @return The value of the preference.
+     */
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T
 
+    /**
+     * Sets the value of the preference.
+     *
+     * @param thisRef The reference to the property owner.
+     * @param property The property metadata.
+     * @param value The new value to set.
+     */
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
+}
+
+/**
+ * Manager class for handling encrypted preferences using SharedPreferences and DataStore.
+ *
+ * Provides property delegation for convenient access and storage of preferences.
+ *
+ * @param context The application context.
+ * @param keyAlias The alias for the encryption key.
+ */
 class PersistManager(context: Context, keyAlias: String = "keyAlias") {
 
     private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias)
@@ -28,16 +71,23 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
     private val gson = Gson()
 
     /**
-     * Class to handle encrypted preferences using property delegation.
+     * Class to handle encrypted SharedPreferences using property delegation.
+     *
+     * @param T The type of the preference value.
+     * @property persist The PersistManager instance.
+     * @property defaultValue The default value for the preference.
+     * @property key The key for the preference. If null or empty, the property name will be used.
+     * @property type The TypeToken of the preference value.
      */
-    class EncryptedPreference<T>(
+    inner class EncryptedSharedPreference<T> (
         private val persist: PersistManager,
         private val defaultValue: T,
         private val key: String? = null,
         private val type: Type,
+    ) : EncryptedPreference<T> {
         private val gson: Gson = persist.gson
-    ) {
-        operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+
+        override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             val storedValue = persist.sharedPrefs.get(preferenceKey, "")
 
@@ -56,7 +106,7 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
             }
         }
 
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             when (value) {
                 is Boolean, is Int, is Float, is Long, is Double, is String -> {
@@ -71,89 +121,52 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
         }
     }
 
-    /**
-     * Creates a SharedPreferences delegate that can be used to store and retrieve encrypted values.
-     * This function provides a way to create preferences that are stored in SharedPreferences with enforced encryption.
-     * Can be used both at class level and within function bodies.
-     *
-     * Usage:
-     * 1. Using property name as key:
-     *    val myKey by persistManager.sharedPreference("default value")
-     *
-     * 2. Explicitly specifying a key:
-     *    val myVariable by persistManager.sharedPreference("default value", key = "customKey")
-     *
-     * Note:
-     * - If no key is specified, the property name is used as the key.
-     * - All values stored using this function are automatically encrypted using EncryptedSharedPreferences.
-     * - Unlike DataStore preferences, there is no option to disable encryption for SharedPreferences.
-     * - This function can be used for property declarations both at class level and within function bodies.
-     *
-     * @param defaultValue The default value to be used if no value is stored for the preference.
-     * @param key The key to store the value under. Uses property name as default key if omitted.
-     * @return An EncryptedPreference instance that handles the encrypted preference operations.
-     */
-    inline fun <reified T> sharedPreference(defaultValue: T, key: String? = null): EncryptedPreference<T> {
-        val type: Type = object : TypeToken<T>() {}.type
-        return EncryptedPreference(this, defaultValue, key, type)
-    }
 
     /**
      * Class to handle encrypted DataStore preferences using property delegation.
+     *
+     * @param T The type of the preference value.
+     * @property persist The PersistManager instance.
+     * @property defaultValue The default value for the preference.
+     * @property key The key for the preference. If null or empty, the property name will be used.
+     * @property encrypted Whether the preference should be stored encrypted. Defaults to true.
      */
-    class EncryptedDataStore<T : Any>(
+    inner class EncryptedDataStore<T : Any>(
         private val persist: PersistManager,
         private val defaultValue: T,
         private val key: String? = null,
         private val encrypted: Boolean = true
-    ) {
-        operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+    ) : EncryptedPreference<T> {
+        override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             val storedValue = persist.dataStorePrefs.getDirect<T>(preferenceKey, defaultValue, encrypted)
             return storedValue
         }
 
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
             persist.dataStorePrefs.putDirect(preferenceKey, value, encrypted)
         }
     }
 
     /**
-     * Creates a DataStore preference delegate that can be used to store and retrieve encrypted values.
-     * This function provides a way to create preferences that are stored in DataStore.
-     * Can be used both at class level and within function bodies.
+     * Delegate class to handle preferences using property annotations.
      *
-     * Usage:
-     * 1. Using property name as key (encrypted by default):
-     *    val myKey by persistManager.dataStorePreference("default value")
+     * This class allows properties annotated with @SharedPref or @DataStorePref to be delegated
+     * and automatically stored in SharedPreferences or DataStore, respectively.
      *
-     * 2. Explicitly specifying a key:
-     *    val myVariable by persistManager.dataStorePreference("default value", key = "customKey")
-     *
-     * 3. Explicitly specifying a key and disabling encryption:
-     *    val myPlainTextVariable by persistManager.dataStorePreference("default value", key = "customKey", encrypted = false)
-     *
-     * Note:
-     * - If no key is specified, the property name is used as the key.
-     * - DataStore preferences are encrypted by default. Use 'encrypted = false' to store in plain text.
-     * - This function can be used for property declarations both at class level and within function bodies.
-     *
-     * @param defaultValue The default value to be used if no value is stored for the preference.
-     * @param key The key to store the value under. Uses property name as default key if omitted.
-     * @param encrypted Whether to enable encryption for the DataStore preference (enabled by default).
-     * @return An EncryptedDataStore instance that handles the preference operations.
+     * @param T The type of the preference value.
+     * @property persist The PersistManager instance.
+     * @property defaultValue The default value for the preference.
+     * @property type The TypeToken of the preference value.
      */
-    inline fun <reified T : Any> dataStorePreference(defaultValue: T, key: String? = null, encrypted: Boolean = true): EncryptedDataStore<T> {
-        return EncryptedDataStore(this, defaultValue, key, encrypted)
-    }
-
     inner class PreferencesDelegate<T : Any>(
         private val persist: PersistManager,
         private val defaultValue: T,
         private val type: Type,
-        private val gson: Gson = persist.gson
     ) {
+        private val gson: Gson = persist.gson
+
         operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
             val sharedPrefAnnotation = property.annotations.filterIsInstance<SharedPref>().firstOrNull()
             val dataStorePrefAnnotation = property.annotations.filterIsInstance<DataStorePref>().firstOrNull()
@@ -231,43 +244,124 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
     }
 
     /**
-     * Creates a preference delegate that can be used with either @SharedPref or @DataStorePref annotations.
+     * Creates a preference delegate that handles properties annotated with @SharedPref or @DataStorePref.
+     *
      * This function provides a unified way to create preferences that can be stored either in SharedPreferences
-     * or DataStore, based on the annotation used.
-     * Can only be used for property declarations at the class level due to reflection restrictions.
+     * or DataStore, based on the annotation used on the property.
      *
-     * Usage:
+     * **Important:**
+     * - This function can only be used for property declarations at the class level due to reflection restrictions.
+     * - For use within function bodies, use the `preference` function instead.
+     *
+     * **Usage:**
+     *
      * 1. With SharedPreferences:
-     *    a) Using property name as key:
-     *       @SharedPref
-     *       val myKey by persistManager.preference("default value")
-     *
-     *    b) Explicitly specifying a key:
-     *       @SharedPref(key = "customKey")
-     *       val myVariable by persistManager.preference("default value")
+     *    - Using property name as key:
+     *      ```kotlin
+     *      @SharedPref
+     *      val myKey by persistManager.annotatedPreference("default value")
+     *      ```
+     *    - Explicitly specifying a key:
+     *      ```kotlin
+     *      @SharedPref(key = "customKey")
+     *      val myVariable by persistManager.annotatedPreference("default value")
+     *      ```
      *
      * 2. With DataStore:
-     *    a) Using property name as key (encrypted by default):
-     *       @DataStorePref
-     *       val myKey by persistManager.preference("default value")
+     *    - Using property name as key (encrypted by default):
+     *      ```kotlin
+     *      @DataStorePref
+     *      val myKey by persistManager.annotatedPreference("default value")
+     *      ```
+     *    - Explicitly specifying a key and disabling encryption:
+     *      ```kotlin
+     *      @DataStorePref(key = "customKey", encrypted = false)
+     *      val myVariable by persistManager.annotatedPreference("default value")
+     *      ```
      *
-     *    b) Explicitly specifying a key and disabling encryption:
-     *       @DataStorePref(key = "customKey", encrypted = false)
-     *       val myVariable by persistManager.preference("default value")
-     *
-     * Note:
+     * **Notes:**
      * - If no key is specified in the annotation, the property name is used as the key.
-     * - DataStore preferences are encrypted by default. Use 'encrypted = false' to store in plain text.
-     * - This function can only be used for property declarations at the class level due to reflection restrictions.
-     * - For use within function bodies, use dataStorePreference() or sharedPreference() instead.
+     * - DataStore preferences are encrypted by default. Use `encrypted = false` to store in plain text.
      *
      * @param defaultValue The default value to be used if no value is stored for the preference.
-     * @return A PreferencesDelegate instance that handles the preference based on the annotation used.
+     * @return A `PreferencesDelegate` instance that handles the preference based on the annotation used.
      * @throws IllegalStateException if neither @SharedPref nor @DataStorePref annotation is used,
      *         or if both annotations are used simultaneously on the same property.
      */
-    inline fun <reified T : Any> preference(defaultValue: T): PreferencesDelegate<T> {
+    inline fun <reified T : Any> annotatedPreference(defaultValue: T): PreferencesDelegate<T> {
         val type: Type = object : TypeToken<T>() {}.type
         return PreferencesDelegate(this, defaultValue, type)
+    }
+
+    /**
+     * Creates a preference delegate for storing preferences without the need for property annotations.
+     *
+     * This function allows you to specify the storage type directly and is suitable for use within function bodies
+     * or when annotations cannot be used.
+     *
+     * **Usage:**
+     *
+     * - Using SharedPreferences:
+     *   ```kotlin
+     *   val myPref by persistManager.preference("default value", key = "myKey", storage = StorageType.SHARED_PREFERENCES)
+     *   ```
+     *
+     * - Using DataStore (encrypted):
+     *   ```kotlin
+     *   val myPref by persistManager.preference("default value", key = "myKey", storage = StorageType.ENCRYPTED_DATA_STORE)
+     *   ```
+     *
+     * - Using DataStore (unencrypted):
+     *   ```kotlin
+     *   val myPref by persistManager.preference("default value", key = "myKey", storage = StorageType.DATA_STORE)
+     *   ```
+     *
+     * **Notes:**
+     * - If `key` is null or empty, the property name will be used as the key.
+     * - When using DataStore, you can specify whether the data should be encrypted by choosing the appropriate `StorageType`.
+     *
+     * @param defaultValue The default value to be used if no value is stored for the preference.
+     * @param key The key for the preference. If null or empty, the property name will be used.
+     * @param storage The type of storage to use. Defaults to `StorageType.SHARED_PREFERENCES`.
+     * @return An `EncryptedPreference` instance for the specified storage type.
+     */
+    inline fun <reified T : Any> preference(defaultValue: T, key: String? = null, storage: Storage = Storage.SHARED_PREFERENCES): EncryptedPreference<T> {
+        val type: Type = object : TypeToken<T>() {}.type
+
+        return if (storage == Storage.SHARED_PREFERENCES) {
+            EncryptedSharedPreference(this, defaultValue, key, type)
+        } else {
+            EncryptedDataStore(this, defaultValue, key, (storage == Storage.DATA_STORE_ENCRYPTED))
+        }
+    }
+
+    /**
+     * Deletes a preference by its key.
+     *
+     * The preference will be deleted from both SharedPreferences and DataStore.
+     *
+     * @param key The key of the preference to delete.
+     */
+    fun delete(key: String) {
+        sharedPrefs.delete(key)
+        dataStorePrefs.deleteDirect(key)
+    }
+
+    /**
+     * Enum representing the types of storage available for preferences.
+     */
+    enum class Storage {
+        /**
+         * Store preference in SharedPreferences.
+         */
+        SHARED_PREFERENCES,
+        /**
+         * Store preference in encrypted DataStore.
+         */
+        DATA_STORE_ENCRYPTED,
+        /**
+         * Store preference in unencrypted DataStore.
+         */
+        DATA_STORE
     }
 }

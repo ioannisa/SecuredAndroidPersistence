@@ -15,21 +15,30 @@ import kotlinx.coroutines.runBlocking
 
 private val Context.dataStore by preferencesDataStore("encrypted_datastore")
 
+/**
+ * Manages encrypted and unencrypted preferences using Android's DataStore.
+ *
+ * This class provides methods to store and retrieve data from DataStore,
+ * with support for encryption using an [IEncryptionManager]. It handles both primitive
+ * and complex data types, allowing for seamless integration with your application's data storage needs.
+ *
+ * @property encryptionManager The encryption manager used for encrypting and decrypting data.
+ */
 class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager) {
 
     private val dataStore = context.dataStore
     private val gson = Gson()
 
     /**
-     * Retrieves a value from DataStore.
+     * Retrieves a value from DataStore, optionally decrypting it.
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
-     * @param useEncryption Whether to use encryption for the value (default true)
+     * @param encrypted Whether the value is stored encrypted. Defaults to `true`.
      * @return The retrieved value.
      */
-    suspend fun <T : Any> get(key: String, defaultValue: T, useEncryption: Boolean = true): T {
-        return if (useEncryption) {
+    suspend fun <T : Any> get(key: String, defaultValue: T, encrypted: Boolean = true): T {
+        return if (encrypted) {
             getEncrypted(key, defaultValue)
         }
         else {
@@ -39,28 +48,28 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
 
     /**
      * Retrieves a value from DataStore without using coroutines.
-     * This is BLOCKING function
+     * This is a **blocking** function.
      *
      * @param key The key to retrieve the value under.
      * @param defaultValue The default value to return if the key does not exist.
-     * @param useEncryption Whether to use encryption for the value (default true)
-     * @return The decrypted value.
+     * @param encrypted Whether the value is stored encrypted. Defaults to `true`.
+     * @return The retrieved value.
      */
-    fun <T: Any> getDirect(key: String, defaultValue: T, useEncryption: Boolean = true): T {
+    fun <T: Any> getDirect(key: String, defaultValue: T, encrypted: Boolean = true): T {
         return runBlocking {
-            get(key, defaultValue, useEncryption)
+            get(key, defaultValue, encrypted)
         }
     }
 
     /**
-     * Saves a value to DataStore.
+     * Saves a value to DataStore, optionally encrypting it.
      *
      * @param key The key to store the value under.
      * @param value The value to store.
-     * @param useEncryption Whether to use encryption for the value (default true)
+     * @param encrypted Whether to encrypt the value before storing. Defaults to `true`.
      */
-    suspend fun <T> put(key: String, value: T, useEncryption: Boolean = true) {
-        if (useEncryption) {
+    suspend fun <T> put(key: String, value: T, encrypted: Boolean = true) {
+        if (encrypted) {
             putEncrypted(key, value)
         } else {
             put(key, value)
@@ -69,22 +78,22 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
 
     /**
      * Saves a value to DataStore without using coroutines.
-     * This function is NON-BLOCKING
+     * This function is **non-blocking**.
      *
      * @param key The key to store the value under.
      * @param value The value to store.
-     * @param useEncryption Whether to use encryption for the value (default true)
+     * @param encrypted Whether to encrypt the value before storing. Defaults to `true`.
      */
-    fun <T> putDirect(key: String, value: T, useEncryption: Boolean = true) {
+    fun <T> putDirect(key: String, value: T, encrypted: Boolean = true) {
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            put(key, value, useEncryption)
+            put(key, value, encrypted)
         }
     }
 
     /**
      * Deletes a value from DataStore.
      *
-     * @param key The key to delete the value under.
+     * @param key The key of the value to delete.
      */
     suspend fun delete(key: String) {
         val dataKey = stringPreferencesKey(key)
@@ -95,9 +104,9 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
 
     /**
      * Deletes a value from DataStore without using coroutines.
-     * This function is NON-BLOCKING
+     * This function is **non-blocking**.
      *
-     * @param key The key to delete the value under.
+     * @param key The key of the value to delete.
      */
     fun deleteDirect(key: String) {
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {

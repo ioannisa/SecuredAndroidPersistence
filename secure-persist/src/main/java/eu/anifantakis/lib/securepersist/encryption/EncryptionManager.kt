@@ -21,7 +21,10 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * EncryptionManager class handles encryption and decryption using the Android KeyStore system or an external key.
+ * [EncryptionManager] class handles encryption and decryption using the Android KeyStore system or an external key.
+ *
+ * It provides methods to encrypt and decrypt data, values, and files, either using a key stored in the Android KeyStore
+ * or an externally provided [SecretKey]. It supports AES encryption in GCM mode with no padding.
  */
 class EncryptionManager : IEncryptionManager {
 
@@ -43,7 +46,7 @@ class EncryptionManager : IEncryptionManager {
         private val gson = Gson()
 
         /**
-         * Generates a new external secret key.
+         * Generates a new external [SecretKey].
          *
          * @return The generated secret key.
          */
@@ -58,7 +61,7 @@ class EncryptionManager : IEncryptionManager {
          *
          * @param value The value to encrypt.
          * @param secretKey The secret key to use for encryption.
-         * @return The encrypted value as a Base64 string.
+         * @return The encrypted value as a Base64 encoded string.
          */
         fun <T> encryptValue(value: T, secretKey: SecretKey): String {
             val stringValue = gson.toJson(value)
@@ -69,8 +72,8 @@ class EncryptionManager : IEncryptionManager {
         /**
          * Decrypts a Base64 encoded string and returns the original value using an external key.
          *
-         * @param encryptedValue The encrypted value as a Base64 string.
-         * @param defaultValue The default value to return if decryption fails.
+         * @param encryptedValue The encrypted value as a Base64 encoded string.
+         * @param defaultValue An instance of the default value (used for type inference).
          * @param secretKey The secret key to use for decryption.
          * @return The decrypted value.
          */
@@ -153,10 +156,10 @@ class EncryptionManager : IEncryptionManager {
         }
 
         /**
-         * Encodes a SecretKey to a Base64 string for storage or transmission.
+         * Encodes a [SecretKey] to a Base64 string for storage or transmission.
          *
-         * @param secretKey The SecretKey to encode.
-         * @return The Base64 encoded string representation of the SecretKey.
+         * @param secretKey The [SecretKey] to encode.
+         * @return The Base64 encoded string representation of the [SecretKey].
          */
         fun encodeSecretKey(secretKey: SecretKey): String {
             val encodedKey = secretKey.encoded
@@ -164,10 +167,10 @@ class EncryptionManager : IEncryptionManager {
         }
 
         /**
-         * Decodes an encoded SecretKey that was stored as Base64 string from the "encodeSecretKey" function back to a SecretKey.
+         * Decodes an encoded [SecretKey] that was stored as a Base64 string from the [encodeSecretKey] function back to a [SecretKey].
          *
-         * @param encodedKey The Base64 encoded string representation of the SecretKey.
-         * @return The decoded SecretKey.
+         * @param encodedKey The Base64 encoded string representation of the [SecretKey].
+         * @return The decoded [SecretKey].
          */
         fun decodeSecretKey(encodedKey: String): SecretKey {
             val decodedKey = Base64.decode(encodedKey, Base64.NO_WRAP)
@@ -175,10 +178,8 @@ class EncryptionManager : IEncryptionManager {
         }
     }
 
-
-
     /**
-     * Constructor for EncryptionManager using the Android KeyStore.
+     * Constructor for [EncryptionManager] using the Android KeyStore.
      *
      * @param context The application context.
      * @param keyAlias The alias for the encryption key in the KeyStore.
@@ -211,7 +212,7 @@ class EncryptionManager : IEncryptionManager {
     }
 
     /**
-     * Constructor for EncryptionManager using an external SecretKey.
+     * Constructor for [EncryptionManager] using an external [SecretKey].
      *
      * @param context The application context.
      * @param externalKey The external secret key for encryption and decryption.
@@ -245,7 +246,7 @@ class EncryptionManager : IEncryptionManager {
      * Encrypts a value and encodes it to a Base64 string.
      *
      * @param value The value to encrypt.
-     * @return The encrypted value as a Base64 string.
+     * @return The encrypted value as a Base64 encoded string.
      */
     override fun <T> encryptValue(value: T): String {
         return Companion.encryptValue(value, secretKey)
@@ -254,8 +255,8 @@ class EncryptionManager : IEncryptionManager {
     /**
      * Decrypts a Base64 encoded string and returns the original value.
      *
-     * @param encryptedValue The encrypted value as a Base64 string.
-     * @param defaultValue The default value to return if decryption fails.
+     * @param encryptedValue The encrypted value as a Base64 encoded string.
+     * @param defaultValue An instance of the default value (used for type inference).
      * @return The decrypted value.
      */
     override fun <T> decryptValue(encryptedValue: String, defaultValue: T): T {
@@ -316,6 +317,7 @@ class EncryptionManager : IEncryptionManager {
      *
      * @param alias The alias of the key to get the attestation for.
      * @return The attestation certificate chain.
+     * @throws IllegalArgumentException If no key is found under the specified alias.
      */
     override fun getAttestationCertificateChain(alias: String): Array<Certificate> {
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply { load(null) }
@@ -325,9 +327,9 @@ class EncryptionManager : IEncryptionManager {
     }
 
     /**
-     * Reads InputStream as ByteArray.
+     * Reads the [InputStream] and returns its content as a [ByteArray].
      *
-     * @return The ByteArray read from the InputStream.
+     * @return The [ByteArray] read from the [InputStream].
      */
     private fun InputStream.readBytes(): ByteArray {
         val buffer = ByteArrayOutputStream()

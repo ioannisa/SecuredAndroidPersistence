@@ -7,6 +7,16 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.gson.Gson
 
+/**
+ * Manages encrypted shared preferences using Android's `EncryptedSharedPreferences`.
+ *
+ * This class provides methods to securely store, retrieve, and delete preferences using
+ * `EncryptedSharedPreferences`. It handles both primitive data types and complex objects,
+ * serializing complex objects to JSON strings using Gson.
+ *
+ * @constructor Creates an instance of [SharedPreferencesManager] with encrypted shared preferences.
+ * @param context The application context.
+ */
 class SharedPreferencesManager(context: Context) {
 
     private val sharedPreferences: SharedPreferences
@@ -29,10 +39,15 @@ class SharedPreferencesManager(context: Context) {
     }
 
     /**
-     * Stores a value in EncryptedSharedPreferences.
+     * Stores a value in `EncryptedSharedPreferences`.
      *
-     * @param key The key to store the value under.
-     * @param value The value to store.
+     * This method supports storing primitive types directly, and complex objects
+     * by serializing them to JSON strings using Gson.
+     *
+     * @param key The key under which the value is stored.
+     * @param value The value to store. Supported types are `Boolean`, `Int`, `Float`, `Long`, `String`, `Double`,
+     *              and complex objects (which will be serialized to JSON).
+     * @param T The type of the value.
      */
     fun <T> put(key: String, value: T) {
         when (value) {
@@ -63,11 +78,16 @@ class SharedPreferencesManager(context: Context) {
     }
 
     /**
-     * Retrieves a value from EncryptedSharedPreferences.
+     * Retrieves a value from `EncryptedSharedPreferences`.
      *
-     * @param key The key to retrieve the value under.
-     * @param defaultValue The default value to return if the key does not exist.
-     * @return The retrieved value.
+     * This method supports retrieving primitive types directly, and complex objects
+     * by deserializing them from JSON strings using Gson.
+     *
+     * @param key The key under which the value is stored.
+     * @param defaultValue The default value to return if the key does not exist or deserialization fails.
+     *                      This parameter also determines the type of the returned value.
+     * @param T The type of the value.
+     * @return The retrieved value, or [defaultValue] if the key does not exist or deserialization fails.
      */
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String, defaultValue: T): T {
@@ -94,9 +114,9 @@ class SharedPreferencesManager(context: Context) {
     }
 
     /**
-     * Deletes a value from EncryptedSharedPreferences.
+     * Deletes a value from `EncryptedSharedPreferences`.
      *
-     * @param key The key to delete the value under.
+     * @param key The key under which the value is stored.
      */
     fun delete(key: String) {
         sharedPreferences.edit(commit = true) {
