@@ -55,7 +55,7 @@ interface EncryptedPreference <T> {
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
 
     fun checkRequiredAnnotations(sharedPrefAnnotation: SharedPref?, dataStorePrefAnnotation: DataStorePref?) {
-        if (sharedPrefAnnotation == null || dataStorePrefAnnotation == null) {
+        if (sharedPrefAnnotation != null || dataStorePrefAnnotation != null) {
             throw IllegalStateException("@SharedPref and @DataStorePref annotations cannot be used with 'preference' function. Did you mean to use 'annotatedPreference'?")
         }
     }
