@@ -2,29 +2,54 @@
 ## Leverage your Persistence and Encryption in Android
 *by Ioannis Anifantakis*
 
-In modern mobile apps, safeguarding user data is crucial. Whether it's user credentials, API tokens, or any sensitive information, SecurePersist allows developers to implement robust encryption and persistence with minimal effort. Imagine needing to securely store users' authentication tokens in a finance app—this library will help you do that efficiently while keeping the process simple.
+## Introduction
 
-Android Secure Persist Library is a pure Kotlin library designed to provide secure and efficient storage of preferences, complex data types, and files in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data—including complex objects and files—is stored safely, protecting it from unauthorized access.
+In modern mobile apps, safeguarding user data is crucial. Whether it’s user credentials, API tokens, or any sensitive information, SecurePersist allows developers to implement robust encryption and persistence with minimal effort.
+> Imagine needing to securely store users’ authentication tokens in a finance app — this library will help you do that efficiently while keeping the process simple.
 
+**Android Secure Persist Library** is a pure Kotlin library designed to provide secure and efficient storage of preferences, complex data types, and files in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data — including complex objects and files — is stored safely, protecting it from unauthorized access.
 
-This library simplifies the process of encrypting and decrypting preferences using `SharedPreferences` and `DataStore`, supports serialization of complex data types, and provides robust file encryption capabilities, making it easy for developers to implement comprehensive secure storage solutions.
+## What this library does
+
+This library allows out of the box with zero-configuration encrypting and decrypting preferences using `SharedPreferences` and `DataStore`, supports serialization of complex data types, and provides robust raw data and file encryption capabilities.
+
+So this library makes it easy for developers to
+
+1. implement comprehensive encrypted storage solutions
+2. encrypt raw data and files with ease
+
 
 ## Features
-* **Secure Preferences Management:** Easily encrypt and decrypt preferences using `SharedPreferences` and `DataStore`.
-* **Support for Complex Data Types:** Serialize and securely store complex objects, including custom classes and collections.
-* **File Encryption and Decryption:** Securely encrypt and decrypt files, ensuring sensitive data remains protected even when stored externally.
-* **Property Delegation:** Use Kotlin property delegation for seamless integration of encrypted preferences.
-* **Annotation Support:** Utilize `@SharedPref` and `@DataStorePref` annotations for convenient preference management.
-* **Raw Data Encryption:** Directly encrypt and decrypt raw data and files with `EncryptionManager` for additional flexibility.
-* **Asynchronous Operations:** Efficiently handle preferences with non-blocking operations using DataStore.
-* **External Key Management:** Use custom external keys for scenarios requiring cross-device data decryption or remote key retrieval.
+
+This library offers a wide range of features for securely persisting data, while also providing encryption services for raw data and files when needed.
+
+* **Secure Preferences Management**: Easily encrypts and decrypts preferences utilizing `SharedPreferences` and `DataStore`.
+
+* **Support for Complex Data Types**: Automatically **serializes** and securely stores complex objects, including custom classes and collections.
+
+* **File Encryption and Decryption**: Securely encrypts and decrypts files, ensuring sensitive data remains protected even when stored externally.
+
+* **Property Delegation**: Uses Kotlin property delegation for seamless integration of encrypted preferences.
+
+* **Annotation Support**: Utilizes `@SharedPref` and `@DataStorePref` annotations for convenient preference management.
+
+* **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
+
+* **Asynchronous Operations**: Efficiently handles preferences with non-blocking operations using `DataStore`.
+
+* **External Key Management**: Allows for custom external keys for scenarios requiring cross-device data decryption or storing the key on a remote server.
 
 ## Why Use SecurePersist?
-* **Security:** Protect sensitive data with robust encryption techniques, including complex objects and files.
-* **Ease of Use:** Simplifies the process of managing encrypted preferences and data with a user-friendly API.
-* **Versatility:** Supports a variety of data types, including primitives, complex objects, and files, integrating seamlessly with existing Android components.
-* **Performance:** Ensures non-blocking operations for a smooth user experience.
-* **Flexibility:** Allows for external key management, enabling secure data storage and retrieval across devices or from remote servers.
+
+* **Security**: Protects sensitive data with robust encryption techniques, including complex objects and files.
+
+* **Ease of Use**: Simplifies the process of managing encrypted preferences and data with a user-friendly API.
+
+* **Versatility**: Supports a variety of data types, including primitives, complex objects, and files, integrating seamlessly with existing Android components.
+
+* **Performance**: Ensures non-blocking operations for a smooth user experience.
+
+* **Flexibility**: Allows for external key management, enabling secure data storage and retrieval across devices or from remote servers.
 
 ---
 
@@ -32,7 +57,7 @@ This library simplifies the process of encrypting and decrypting preferences usi
 
 There are two ways to install this library to your project
 
-### Option 1: Add the Module Directly to Your Project
+### Option 1: By adding the Module Directly to Your Project
 The directory `secure-persist` contains the module of this library, so you can
 1. Copy the secure-persist directory from this repository into the root folder of your project.
 2. Include the Module at the bottom of your `settings.gradle` 
@@ -46,7 +71,7 @@ include(":secure-persist") // <-- add this line so android knows this folder is 
 implementation(project(":secure-persist"))
 ```
 
-### Option 2: Use JitPack to Add as a Dependency
+### Option 2: Through JitPack Repository
 
 [![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/SecuredAndroidPersistence)
 
@@ -55,7 +80,7 @@ implementation(project(":secure-persist"))
 implementation("com.github.ioannisa:SecuredAndroidPersistence:2.2.1")
 ```
 
-2. Add Jitpack as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) so this library is able to download
+2. Add **Jitpack** as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) for gradle to know how to fetch dependencies served by that repository:
 ```kotlin
 repositories {
     google()
@@ -66,66 +91,87 @@ repositories {
 
 ---
 
-# PersistManager
+## PersistManager
 
-`PersistManager` is the core component of SecurePersist. It manages encrypted preferences using both `SharedPreferences` and `DataStore`, leveraging the `EncryptionManager`'s cryptographic algorithms.  It supports serialization and encryption of complex data types, including custom objects and collections.
+The `PersistManager` is the core component of `SecurePersist`, responsible for managing encrypted preferences using both `SharedPreferences` and `DataStore` **with zero-configuration**.
 
-In version 2.0 of the library, `PersistManager` has undergone a major refactor, introducing several breaking changes compared to previous versions. This documentation focuses on the latest `PersistManager` approaches.
+It utilizes the `EncryptionManager`'s cryptographic algorithms to securely handle data. Additionally, it supports encryption of complex data types, including custom objects and collections, with automatic serialization powered by the Gson library in the background.
 
-### Initialization
-When initializing `PersistManager`, it creates an instance of its own `EncryptionManager` to handle encryption and decryption of persistent data. If you don't need to encrypt and decrypt external data beyond preferences, you don't need a separate `EncryptionManager` instance.
+## Initialization
 
-When initializing the `PersistManager`, you can optionally define a KeyStore alias. If you don't provide one, a default alias (`"keyAlias"`) will be created for you. This `keyAlias` is used by the KeyStore as an identifier for the pool of keys you store, so even if you don't define a `keyAlias`, it is totally fine.
+When initializing `PersistManager`, an instance of `EncryptionManager` is automatically created to manage the encryption and decryption of persisted data. If your encryption needs are limited to preferences, creating an additional `EncryptionManager` instance is unnecessary.
 
-```kotlin
+*However, if you need to apply encryption to raw data or files outside of preference management, you can directly utilize the `EncryptionManager` included in the library for custom encryption tasks unrelated to persistence. This flexibility allows you to securely handle both persistent and non-persistent data within a single solution.*
+
+During `PersistManager` initialization, you can optionally specify a `KeyStore` alias. If none is provided, a default alias ("keyAlias") will be generated for you. This alias serves as an identifier for the pool of keys stored in the KeyStore, so even if you don’t define a custom alias, the default will function without any issues.
+
+```Kotlin
 // Create a PersistManager instance with a custom KeyStore alias
 val persistManager = PersistManager(context, "your_key_alias")
-
+    
 // Create a PersistManager instance with the default KeyStore alias ("keyAlias")
 val persistManager = PersistManager(context)
 ```
 
 ---
 
-## Preference Management with PersistManage
+## Preference Management
 
-`PersistManager` provides a unified and flexible way to handle encrypted preferences using both `SharedPreferences` and `DataStore`. It offers property delegation and supports property annotations for even more convenient preference management.
+`PersistManager` provides a unified and flexible way to handle encrypted preferences using both `SharedPreferences` and `DataStore`.
 
-### Property Annotations
+The `PersistManager` class currently provides multiple ways to manage `SharedPreferences` and `DataStore` preferences, offering flexibility based on your needs:
+
+1. **Using Property Delegation with Annotations**: Through the **`annotatedPreferences`** function, which leverages annotations for automatic preference handling.
+
+1. **Using Property Delegation without Annotations**: Through the **`preferences`** function, which avoids annotations and is suited for dynamic use cases where reflection-based annotations might be problematic.
+
+1. **Direct Access without Delegation**: You can manage preferences directly through two exposed instance variables:
+ — **sharedPrefs instance variable** that leads to the `SharedPreferencesManager` class, responsible for managing encrypted shared preferences.
+ — **dataStorePrefs instance variable** that leads to the `DataStoreManager` class, responsible for managing DataStore Preferences with encryption.
+
+## Preference Management using Property Delegation
+
+As mentioned, `PersistManager` simplifies the usage of encrypted `SharedPreferences` or `DataStore` preferences by supporting **property delegation** *(using the `by` keyword)*. This makes handling advanced persistence as straightforward as working with regular Kotlin properties, while also managing encryption and serialization behind the scenes.
+
+Currently, there are two ways to apply **property delegation** in `PersistManager`:
+
+* **Property Delegation with Annotations**: Via the **`annotatedPreference`** function, intended for class-level declarations. This approach allows you to define preferences using annotations for automatic delegation.
+
+* **Property Delegation without Annotations**: Via the **`preference`** function, designed for use within function bodies. This approach is ideal where annotations aren't feasible due to Kotlin reflection limitations, providing a flexible alternative for property delegation.
+
+Both methods offer a seamless and secure way to manage preferences with minimal effort.
+
+> **Important Note:**
+**When handling DataStore Preferences via the property delegation approaches**, it's crucial to note that the system manages coroutines internally. This means that `put` operations are non-blocking, ensuring efficient data storage. However, retrieving preferences with `get` is handled in a blocking manner, which may impact performance during data access.
+
+*This distinction is important for understanding how the system balances performance and functionality when working with DataStore preferences.*
+
+### Peristence `by annotatedPreference` function
+
 You can use the following annotations to specify where and how your preferences should be stored:
 
-* `@SharedPref`: Indicates that the property should be stored in `SharedPreferences`.
-* `@DataStorePref`: Indicates that the property should be stored in `DataStore`. By default, DataStore preferences are encrypted.
+* **`@SharedPref`**: Indicates that the property should be stored in `SharedPreferences`.
 
-```kotlin
-@SharedPref
-var mySharedPref by persistManager.annotatedPreference("default value")
+* **`@DataStorePref`**: Indicates that the property should be stored in `DataStore`. By default, `DataStore` preferences are encrypted.
 
-@DataStorePref
-var myDataStorePref by persistManager.annotatedPreference("default value")
-```
+The **`annotatedPreference`** function creates a preference delegate that handles properties annotated with `@SharedPref` or `@DataStorePref`. This function provides a unified way to create preferences that can be stored either in SharedPreferences or DataStore, based on the annotation used on the property.
 
-### Using `annotatedPreference` property delegate
-The `annotatedPreferenc`e function creates a preference delegate that handles properties annotated with `@SharedPref` or `@DataStorePref`. This function provides a unified way to create preferences that can be stored either in SharedPreferences or DataStore, based on the annotation used on the property.
+**1. annotatedPreference **with** @SharedPref**
 
-**Important:**
-
-* This function can only be used for property declarations at the class level due to reflection restrictions.
-* For use within function bodies, use the `preference` function instead.
-
-**Usage:**
-**1. With SharedPreferences:**
 ```kotlin
 // assuming key as the variable name
 @SharedPref
 var myKey by persistManager.annotatedPreference("default value")
-
+    
 // or with a custom key
 @SharedPref(key = "myKey")
 var myVariable by persistManager.annotatedPreference("default value")
 ```
 
-**2. With DataStore:**
+**2. annotatedPreference **with** @DataStorePref**
+
+**Important:** It is importamnt to note that when making use of the **DataStore Preferences** via `@DataStorePref` annotation, **the system handles coroutines internally**, which uses behind the scenes non-blocking `put`, but the `get` the preference from DataStore happens in a blocking way.
+
 ```kotlin
 // assuming key as the variable name and assuming encryption
 @DataStorePref
@@ -140,12 +186,18 @@ var myVariable by persistManager.annotatedPreference("default value")
 * If no key is specified in the annotation, the property name is used as the key.
 * DataStore preferences are encrypted by default. Use `encrypted = false` to store in plain text.
 
+### Peristence “by” the preference function (no annotations)
 
-### Using `preference` property delegate
-The `preference` function allows you to create a preference delegate without the need for property annotations. This is suitable for use within function bodies or when annotations cannot be used.
+The **`preference`** function allows you to create a property delegate for managing preferences without the need for annotations.
 
-**Usage:**
-**1. Using SharedPreferences:**
+While it offers the same functionality as its annotated counterpart (`annotatedPreference`), it is specifically designed for cases where annotations are impractical, such as within function bodies where Kotlin's reflection limitations can pose challenges.
+
+This makes the `preference` function a highly flexible alternative for handling preferences in dynamic contexts.
+
+*The only trade-off is that it lacks the annotations that can enhance the readability and aesthetics of the code, making it less immediately clear for someone reviewing the code compared to the annotated approach.*
+
+
+**1. `preference`** function utilizing the **`EncryptedSharedPreferences`**
 ```kotlin
 // assuming key to be the variable name (myKey) 
 // assuming storage to be SharedPreferences
@@ -164,7 +216,7 @@ var myPref by persistManager.preference(
 )
 ```
 
-**1. Using DataStore Preferences:**
+**2. `preference`** fuction utilizing the **`DataStore`**
 ```kotlin
 // declaring the key to be "myKey"
 // declaring Storage to Encrypted DataStore Preferences
@@ -184,19 +236,30 @@ var myPref by persistManager.preference(
 ```
 
 **Notes:**
-* If key is null or empty, the property name will be used as the key.
-* When using DataStore, you can specify whether the data should be encrypted by choosing the appropriate StorageType.
+* If `key` is `null` or empty, the property name will be used as the key.
+* When using `DataStore`, you can specify whether the data should be encrypted by choosing the appropriate Storage.
 
 #### `Storage` Enum
-The `Storage` enum represents the types of storage available for preferences:
-* `SHARED_PREFERENCES`: Store preference in `SharedPreferences`.
-* `DATA_STORE_ENCRYPTED`: Store preference in encrypted `DataStore`.
-* `DATA_STORE`: Store preference in unencrypted `DataStore`.
+The `Storage` enum represents the types of storage available for preferences specifically for use within the preference function:
+* **`SHARED_PREFERENCES`**: Store preference in `SharedPreferences`.
+* **`DATA_STORE_ENCRYPTED`**: Store preference in encrypted `DataStore`.
+* **`DATA_STORE`**: Store preference in unencrypted `DataStore`.
 
-## PersistManager - SharedPreferences Encryption without delegation
-`SecurePersist` offers a zero-configuration approach for encrypting and decrypting `SharedPreferences`, now including complex data types.
+## PersistManager — Secure Preferences without delegation
 
-#### Securely utilizing SharedPreferences directly
+The `PersistManager` class supports all the mentioned functionalities, while also offering traditional coding methods alongside the two property delegate approaches previously discussed.
+
+For that, it exposes two public instance variables, each tailored for a specific use case:
+
+* **`sharedPrefs`** specialized for encrypted preferences via EncryptedSharedPreferences
+
+* **`dataStorePrefs`** specialized for preferences via DataStore with encryption via the `EncryptionManager` class which is contained in this library.
+
+These variables allow you to choose the appropriate preference management method based on your needs, ensuring flexibility and security across different storage mechanisms.
+
+## Handling SharedPreferences using the `sharedPrefs` instance variable
+This will introduce you to the `PersistManager`’s `sharedPrefs` instance variable to handle encrypted shared preferences.
+
 ```kotlin
 // Encrypt and save a preference
 persistManager.sharedPrefs.put("key1", "secureValue")
@@ -208,7 +271,20 @@ val value: String = persistManager.sharedPrefs.get("key1", "defaultValue")
 persistManager.sharedPrefs.delete("key1")
 ```
 
-#### Handling complex data types
+To handle `Double` and complex data types, the library uses serialization via the `gson` library, while standard types are supported natively by the `SharedPreferences` avoid serialization.
+
+| Data Type | Supported Directly | Handled via gson Serialization |
+|-----------|:------------------:|:------------------------------:|
+| Boolean   | Yes                | No                             |
+| Int       | Yes                | No                             |
+| Float     | Yes                | No                             |
+| Long      | Yes                | No                             |
+| Double    | No                 | Yes                            |
+| String    | Yes                | No                            |
+| Custom Objects (e.g., Data Classes) | No | Yes                  |
+
+***Example of mixing delegated approach and non-delegated approach with complex data types for encrypted shared preferences:***
+
 ```kotlin
 data class AuthInfo(
     val accessToken: String = "",
@@ -233,25 +309,27 @@ println(authInfo)
 println(persistManager.sharedPrefs.get("authInfo", AuthInfo()))
 ```
 
-To handle `Double` and complex data types, the library uses serialization via the `gson` library, while standard types supported by `SharedPreferences` avoid serialization.
+## Handling DataStore Preferences using the dataStorePrefs instance variable
 
-| Data Type | Supported Directly | Handled via gson Serialization |
-|-----------|:------------------:|:------------------------------:|
-| Boolean   | Yes                | No                             |
-| Int       | Yes                | No                             |
-| Float     | Yes                | No                             |
-| Long      | Yes                | No                             |
-| Double    | No                 | Yes                            |
-| String    | Yes                | No                            |
-| Custom Objects (e.g., Data Classes) | No | Yes                  |
+**`DataStore`** Preferences is a modern, non-blocking, and highly efficient solution for managing application preferences, built around Kotlin’s **coroutine** architecture. Unlike `SharedPreferences`, which operates synchronously and can block the main thread, `DataStore` performs operations asynchronously, ensuring a smoother and more responsive user experience.
 
-## PersistManager - DataStore Preferences Encryption without delegation
+However, a key limitation of `DataStore` is the lack of built-in encryption, unlike `EncryptedSharedPreferences`. This makes secure implementations more challenging, leading some developers to revert to `SharedPreferences` despite `DataStore`'s superior performance and flexibility.
 
-Using `DataStore preferences` with this library is similar to accessing SharedPreferences. You can make direct use of `DataStore` or use property delegation. DataStore operations can be performed using coroutines (as DataStore naturally operates) or without coroutines, with the library internally managing the coroutine calls on your behalf.
+1. To address this, our library’s **`EncryptionManager`** provides the missing encryption layer for `DataStore`, allowing developers to securely handle preferences without compromising on performance or having to revert to `SharedPreferences`.
 
-**Note:** For DataStore preferences, encryption is enabled by default unless specified otherwise.
+1. Additionally, the library allows for automatic serialization of complex data
 
-#### Option 1 - Accessing DataStore with `Coroutines`
+1. And finally, our library can provide an extra way of accessing the DataStore preferences by internally handling coroutines, enabling direct access to `DataStore` preferences with non-blocking functions for storing and deleting preferences. For retrieval operations, blocking access is provided, making usage as simple as with `EncryptedSharedPreferences`, but more performant for storing and deleting data.
+
+> **Note**: For DataStore preferences handled via PersistManager, encryption is enabled by default unless specified otherwise.
+
+### Option 1 — Accessing `DataStore` with `Coroutines`
+
+Exposing coroutines directly to the developer allows for non-blocking and performant way of storing, deleting and retrieving data, just as designed by DataStore, but with the extra ability to have encryption and without having to make any initialization.
+
+By exposing coroutines directly to the developer, our library enables a non-blocking, efficient way to `put`, `delete`, and `get` data — just as DataStore was designed to do.
+
+This approach maintains the performance benefits of `DataStore`, while adding the critical capability of encryption, all without requiring any additional setup or initialization from the developer. This seamless integration ensures secure, asynchronous data management with minimal effort.
 
 **Related Functions:**
 * `put`
@@ -282,14 +360,17 @@ CoroutineScope(Dispatchers.IO).launch {
 }
 ```
 
-#### Option 2 - Accessing DataStore Without Coroutines
-To access DataStore preferences without coroutines, use the `Direct` versions of the functions.
+### Option 2 — Accessing `DataStore` Without Coroutines
+If you prefer ease of use without dealing with coroutines directly, `PersistManager` has you covered! The second approach for accessing `DataStore` preferences in `PersistManager` **handles coroutines behind the scenes**, delivering the same performance benefits while simplifying usage.
+
+This method still offers superior performance over `EncryptedSharedPreferences`, particularly for `put` and `delete` operations, as they are executed in a non-blocking manner. The only blocking operation is retrieving data with get.
+
+> *To access DataStore preferences without coroutines, use the `Direct` versions of the functions.*
 
 **Related Functions:**
 * `putDirect` (non-blocking)
 * `getDirect` (blocking)
 * `deleteDirect` (non-blocking)
-
 
 ```kotlin
 // assuming encryption - Encrypt and store in a non-blocking way to DataStore
@@ -308,12 +389,11 @@ val value: String = persistManager.dataStorePrefs.getDirect("key1", "defaultValu
 persistManager.dataStorePrefs.deleteDirect("key1")
 ```
 
-#### Handling Complex Data Types
+##### How PersistManager handles DataStore's encrypted and unencrypted data:
 
+When storing data in `DataStore` with encryption enabled, all data types are `serialized`, as `DataStore` does not natively support encryption. Here's how the library handles different scenarios:
 
-##### DataStore handling for unencrypted data
-
-When storing to `DataStore` without encryption, `serialization` is only required for Double and complex data types, as DataStore supports primitive types directly.
+**-- Without Encryption:** If you use DataStore without encryption, only complex types (e.g., custom objects, collections) and Double values are serialized, as these require transformation for storage.
 
 | Data Type | Supported Directly | Handled via gson Serialization |
 |-----------|:------------------:|:------------------------------:|
@@ -325,9 +405,7 @@ When storing to `DataStore` without encryption, `serialization` is only required
 | String    | Yes                | No                            |
 | Custom Objects (e.g., Data Classes) | No | Yes                  |
 
-##### DataStore handling for encrypted data
-
-When storing to `DataStore` with encryption enabled, `serialization` is performed on all data types because DataStore doesn't support encryption natively. During the encryption phase, everything gets serialized and stored as an encrypted string.
+**--With Encryption:** If encryption is enabled, everything - regardless of type - is serialized and stored as an encrypted string to ensure data security.
 
 | Data Type | Supported Directly | Handled via gson Serialization |
 |-----------|:------------------:|:------------------------------:|
@@ -338,6 +416,8 @@ When storing to `DataStore` with encryption enabled, `serialization` is performe
 | Double    | No                 | Yes                            |
 | String    | No                 | Yes                           |
 | Custom Objects (e.g., Data Classes) | No | Yes                  |
+
+This approach ensures that encrypted data remains secure, while unencrypted data is only serialized when necessary, optimizing performance and storage.
 
 ### Deleting Preferences with PersistManager
 You can delete preferences using the `delete` function from inside the PersistManager or utilize the delete functions of the equivalent storage types like that:
@@ -361,10 +441,13 @@ persistManager.dataStorePrefs.deleteDirect("key1")
 ---
 
 # EncryptionManager
-`EncryptionManager`  provides additional functionality for encrypting and decrypting raw data, files, and complex objects.
+The `EncryptionManager` can be used independently of `PersistManager`, offering robust functionality for encrypting and decrypting raw data, files, and complex objects.
 
-It allows you to save your encryption key and pass it to a server, and thus also allows to pass during construction or with a setter such a key to use.  If you don't pass an external key, the library will create a custom key and push it to the KeyStore so it can be used as long as you don't uninstall your app.
+It provides two flexible key management options:
 
+1. **KeyStore Integration**: Leverages Android’s **`KeyStore`** for hardware-backed encryption, where keys are securely managed within the device's hardware chip.
+
+1. **External Keys**: Allows you to generate and manage your own **`SecretKey`** outside of KeyStore. This is useful if you need to store keys remotely, for instance, when encrypting data that will also be stored on a remote server.
 ### Initialization
 
 #### You can initialize using the `KeyStore`
@@ -372,15 +455,13 @@ It allows you to save your encryption key and pass it to a server, and thus also
 val encryptionManager = EncryptionManager(context, "your_key_alias")
 ```
 
-#### You can initialize using the `External Key`
+#### You can initialize using the `External Key` to generate a `SecretKey`
 
-First, generate an external key:
 ```kotlin
+// First, generate an external key:
 val externalKey = EncryptionManager.generateExternalKey()
-```
 
-Then, use the generated key to create an instance of `EncryptionManager`:
-```kotlin
+// Then, use the generated key to create an instance of EncryptionManager:
 val encryptionManager = EncryptionManager(context, externalKey)
 ```
 
@@ -393,7 +474,7 @@ val encryptionManager = EncryptionManager(context, externalKey)
 
 AES in GCM mode is an authenticated encryption algorithm that provides both data confidentiality and integrity. Using the Android KeyStore for key management adds an extra layer of security by storing keys in a secure, hardware-backed environment.
 
-#### Encrypting and Decrypting Raw Data
+### Encrypting and Decrypting Raw Data via KeyStore
 
 ```kotlin
 val encryptionManager = EncryptionManager(context, "your_key_alias")
@@ -413,7 +494,7 @@ val decryptedValue: String = encryptionManager.decryptValue(encryptedValue, "def
 
 ```
 
-#### Encrypting and Decrypting Raw Data with an External Key
+### Encrypting and Decrypting Raw Data with `SecretKey` via an Externa Key
 One important feature is the ability generate an external key, which you can then pass to the library.
 
 By doing so, you can safe-keep that key on a server to be able to decrypt data when needed in the future.
@@ -427,6 +508,7 @@ val encryptionManager = EncryptionManager(externalKey)
 ```
 
 Also you can supply that key at runtime  only for a specific entryption/decryption in Static context, leaving the keystore key for everything else
+
 ```kotlin
 // Create an EncryptionManager instance
 val encryptionManager = EncryptionManager(context, "myKeyAlias")
@@ -447,7 +529,7 @@ val decryptedValue1 = EncryptionManager.decryptValue(encryptedValue, "defaultVal
 val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultValue")
 ```
 
-#### Storing the externalKey (SecretKey) to some other medium
+### Storing the externalKey (SecretKey) to some other medium
 If you have generated a key and want to securely transmit it to some API or retrieve it, then this library provides two convenience static methods for `encoding` and `decoding` that key to a string so you can easily transfer it.
 
 ##### Exporting custom key to save it to some server
@@ -460,10 +542,14 @@ val encryptedData = EncryptionManager.encryptData("Hello, Secure World!", origin
 
 // create a string that contains the encoded key (then send it to some server)
 val encodedKey: String = EncryptionManager.encodeSecretKey(originalKey)
+
+// make network call and save the encoded key string to some server
 ```
 
-##### Retrieving the custom key from the server to use it o the app
+##### Retrieving the custom key from the server to use it in the app
 ```kotlin
+val encodedKey = ... // fetch the string with encoded key from a remote server
+
 // construct a SecretKey from that encodedKey retrieved from the server
 val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
 
@@ -471,7 +557,12 @@ val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
 val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
 ```
 
-## FILES Encryption/Decription ##
+### FILES Encryption/Decription ##
+
+Additionally, `EncryptionManager` offers **`encryptFile`** and **`decryptFile`** functions, enabling you to securely encrypt data and store it in a file, as well as read and decrypt the data from the file when needed.
+
+These functions provide a seamless way to handle file-level encryption and decryption, ensuring that sensitive data remains secure during both storage and retrieval.
+
 ```kotlin
 // Create an EncryptionManager instance
 val encryptionManager = EncryptionManager(context, "your_key_alias")
