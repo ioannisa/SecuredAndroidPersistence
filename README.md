@@ -246,12 +246,14 @@ The `Storage` enum represents the types of storage available for preferences spe
 * **`DATA_STORE`**: Store preference in unencrypted `DataStore`.
 
 ### Reading and Writing persisted data with property delegation
+In the example below, we declare an encrypted shared preference managed by `PersistManager`, which handles an instance of a data class `AuthInfo`.
 
-At the example below we are declaring an encrypted shared preference managed by `PersistManager` which handles a custom dataclass.  When we declare it, `PersistManager` takes the variable's name and sets it as the key to the encrypted shared preference.  Since we don't declare what storage we want, PersistManager sets `SHARED_PREFERENCE` as the default `Storage` and serializes the object into json using the `gson` library, and stores it encrypted.
+When we declare it, `PersistManager` automatically uses the variable's name as the `key` for the encrypted shared preference.
+Since we don't specify a `Storage` type, `PersistManager` defaults to `SHARED_PREFERENCES`. It serializes the object into JSON using the `Gson` library and stores it encrypted.
 
-Whenever we refer to that object, the `get` method of the property delegate fires, which decrypts and deserializes the variable, reconstructing an AuthInfo object instance.
+Whenever we access this object, the `get` method of the property delegate is triggered. This method decrypts and deserializes the stored data, reconstructing an instance of `AuthInfo`.
 
-To `delete` a preference we need to go through the delete function of PersistManager.
+To delete a preference, we need to use the `delete` function provided by `PersistManager`.
 
 ```kotlin
 data class AuthInfo(
