@@ -245,6 +245,40 @@ The `Storage` enum represents the types of storage available for preferences spe
 * **`DATA_STORE_ENCRYPTED`**: Store preference in encrypted `DataStore`.
 * **`DATA_STORE`**: Store preference in unencrypted `DataStore`.
 
+### Reading and Writing persisted data with property delegation
+
+At the example below we are declaring an encrypted shared preference managed by `PersistManager` which handles a custom dataclass.  When we declare it, `PersistManager` takes the variable's name and sets it as the key to the encrypted shared preference.  Since we don't declare what storage we want, PersistManager sets `SHARED_PREFERENCE` as the default `Storage` and serializes the object into json using the `gson` library, and stores it encrypted.
+
+Whenever we refer to that object, the `get` method of the property delegate fires, which decrypts and deserializes the variable, reconstructing an AuthInfo object instance.
+
+To `delete` a preference we need to go through the delete function of PersistManager.
+
+```kotlin
+data class AuthInfo(
+    val accessToken: String = "",
+    val refreshToken: String = "",
+    val expiresIn: Long = 0L
+)
+
+// Assumes Storage=SHARED_PREFERENCE, and key="authInfo"
+var authInfo by persistManager.preference(AuthInfo())
+
+// Update authInfo as if it was a normal variable
+authInfo = AuthInfo(
+    accessToken = "token123",
+    refreshToken = "refresh123",
+    expiresIn = 3600L
+)
+
+// Access as if it was a normal variable
+// It retrieves the encrypted shared preference
+println(authInfo)
+
+// Deleting data
+// if you try to access the delegate again it will return default value
+persistManager.delete("authInfo")
+```
+
 ## PersistManager — Secure Preferences without delegation
 
 The `PersistManager` class supports all the mentioned functionalities, while also offering traditional coding methods alongside the two property delegate approaches previously discussed.
@@ -282,32 +316,6 @@ To handle `Double` and complex data types, the library uses serialization via th
 | Double    | No                 | Yes                            |
 | String    | Yes                | No                            |
 | Custom Objects (e.g., Data Classes) | No | Yes                  |
-
-***Example of mixing delegated approach and non-delegated approach with complex data types for encrypted shared preferences:***
-
-```kotlin
-data class AuthInfo(
-    val accessToken: String = "",
-    val refreshToken: String = "",
-    val expiresIn: Long = 0L
-)
-
-// Create encrypted shared preference and store it with an initial value
-var authInfo by persistManager.preference(AuthInfo())
-
-// Update authInfo as if it was a normal variable
-authInfo = AuthInfo(
-    accessToken = "token123",
-    refreshToken = "refresh123",
-    expiresIn = 3600L
-)
-
-// Retrieve the encrypted shared preference
-println(authInfo)
-
-// Equivalent to accessing the preference directly
-println(persistManager.sharedPrefs.get("authInfo", AuthInfo()))
-```
 
 ## Handling DataStore Preferences using the dataStorePrefs instance variable
 
@@ -593,3 +601,4 @@ Contributions are welcome! Please open an issue or submit a pull request on GitH
 
 ## License
 This project is licensed under the MIT License
+Store preference in unencrypted DataStore.
