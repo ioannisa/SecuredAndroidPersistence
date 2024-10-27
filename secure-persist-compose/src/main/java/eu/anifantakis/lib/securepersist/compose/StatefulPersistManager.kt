@@ -1,6 +1,8 @@
 package eu.anifantakis.lib.securepersist.compose
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SnapshotMutationPolicy
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import eu.anifantakis.lib.securepersist.PersistManager
 import kotlin.properties.ReadWriteProperty
@@ -14,24 +16,24 @@ class StatefulPersistManager(private val persistManager: PersistManager) {
         private val storage: PersistManager.Storage = PersistManager.Storage.SHARED_PREFERENCES,
     ) : MutableState<T>, ReadWriteProperty<Any?, T> {
 
-        private val snapshotPolicy = structuralEqualityPolicy<T>()
+        private val snapshotPolicy: SnapshotMutationPolicy<T> = structuralEqualityPolicy()
 
         private var preferenceKey: String? = null
-        private var _value: T? = null
+        private var _state: MutableState<T>? = null
 
         override var value: T
             get() {
-                if (_value == null) {
-                    initializeValue()
+                if (_state == null) {
+                    initializeState()
                 }
-                return _value!!
+                return _state!!.value
             }
             set(newValue) {
-                if (_value == null) {
-                    initializeValue()
+                if (_state == null) {
+                    initializeState()
                 }
-                if (!snapshotPolicy.equivalent(_value!!, newValue)) {
-                    _value = newValue
+                if (!snapshotPolicy.equivalent(_state!!.value, newValue)) {
+                    _state!!.value = newValue
                     saveValue(newValue)
                 }
             }
@@ -50,11 +52,12 @@ class StatefulPersistManager(private val persistManager: PersistManager) {
             this.value = value
         }
 
-        private fun initializeValue() {
+        private fun initializeState() {
             if (preferenceKey == null) {
                 throw IllegalStateException("Preference key is not set.")
             }
-            _value = getPersistedValue()
+            val persistedValue = getPersistedValue()
+            _state = mutableStateOf(persistedValue, policy = snapshotPolicy)
         }
 
         private fun getPersistedValue(): T {
@@ -65,7 +68,11 @@ class StatefulPersistManager(private val persistManager: PersistManager) {
                     persistManager.sharedPrefs.get(prefKey, defaultValue)
                 }
                 PersistManager.Storage.DATA_STORE, PersistManager.Storage.DATA_STORE_ENCRYPTED -> {
-                    persistManager.dataStorePrefs.getDirect(prefKey, defaultValue, (storage==PersistManager.Storage.DATA_STORE_ENCRYPTED))
+                    persistManager.dataStorePrefs.getDirect(
+                        prefKey,
+                        defaultValue,
+                        storage == PersistManager.Storage.DATA_STORE_ENCRYPTED
+                    )
                 }
             }
         }
@@ -77,7 +84,11 @@ class StatefulPersistManager(private val persistManager: PersistManager) {
                     persistManager.sharedPrefs.put(prefKey, value)
                 }
                 PersistManager.Storage.DATA_STORE, PersistManager.Storage.DATA_STORE_ENCRYPTED -> {
-                    persistManager.dataStorePrefs.putDirect(prefKey, value, (storage==PersistManager.Storage.DATA_STORE_ENCRYPTED))
+                    persistManager.dataStorePrefs.putDirect(
+                        prefKey,
+                        value,
+                        storage == PersistManager.Storage.DATA_STORE_ENCRYPTED
+                    )
                 }
             }
         }
