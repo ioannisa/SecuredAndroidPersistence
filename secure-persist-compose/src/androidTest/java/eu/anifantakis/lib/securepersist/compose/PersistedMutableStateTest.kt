@@ -9,11 +9,11 @@ import org.junit.*
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class StatefulPersistManagerTest {
+class PersistedMutableStateTest {
 
     private lateinit var context: Context
     private lateinit var persistManager: PersistManager
-    private lateinit var statefulPersistManager: StatefulPersistManager
+
 
     data class User(val name: String, val age: Int)
 
@@ -21,7 +21,6 @@ class StatefulPersistManagerTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         persistManager = PersistManager(context)
-        statefulPersistManager = StatefulPersistManager(persistManager)
     }
 
     @After
@@ -42,7 +41,7 @@ class StatefulPersistManagerTest {
     fun testInitializationWithDefaultValue() {
         persistManager.delete("testKey")
 
-        var testValue by statefulPersistManager.persistedMutableState(
+        var testValue by persistManager.persistedMutableStateOf(
             defaultValue = 42,
             key = "testKey",
             storage = PersistManager.Storage.SHARED_PREFERENCES,
@@ -53,7 +52,7 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testPersistenceOfUpdatedValue() {
-        var testValue by statefulPersistManager.persistedMutableState(
+        var testValue by persistManager.persistedMutableStateOf(
             defaultValue = 10,
             key = "testKey",
             storage = PersistManager.Storage.SHARED_PREFERENCES
@@ -61,7 +60,7 @@ class StatefulPersistManagerTest {
 
         testValue = 100
 
-        var testValueNew by statefulPersistManager.persistedMutableState(
+        var testValueNew by persistManager.persistedMutableStateOf(
             defaultValue = 20,
             key = "testKey",
             storage = PersistManager.Storage.SHARED_PREFERENCES
@@ -72,14 +71,14 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testStringPersistence() {
-        var testString by statefulPersistManager.persistedMutableState(
+        var testString by persistManager.persistedMutableStateOf(
             defaultValue = "default1",
             storage = PersistManager.Storage.SHARED_PREFERENCES
         )
 
         testString = "Updated Text"
 
-        var testStringNew by statefulPersistManager.persistedMutableState(
+        var testStringNew by persistManager.persistedMutableStateOf(
             key = "testString",
             defaultValue = "default2",
             storage = PersistManager.Storage.SHARED_PREFERENCES
@@ -90,7 +89,7 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testBooleanPersistence() {
-        var testBoolean by statefulPersistManager.persistedMutableState(
+        var testBoolean by persistManager.persistedMutableStateOf(
             key = "testBooleanNew",
             defaultValue = false,
             storage = PersistManager.Storage.SHARED_PREFERENCES,
@@ -98,7 +97,7 @@ class StatefulPersistManagerTest {
 
         testBoolean = true
 
-        var testBooleanNew by statefulPersistManager.persistedMutableState(
+        var testBooleanNew by persistManager.persistedMutableStateOf(
             defaultValue = false,
             storage = PersistManager.Storage.SHARED_PREFERENCES,
         )
@@ -110,7 +109,7 @@ class StatefulPersistManagerTest {
     fun testCustomObjectPersistence() {
         val defaultUser = User("Default", 0)
 
-        var user by statefulPersistManager.persistedMutableState(
+        var user by persistManager.persistedMutableStateOf(
             defaultValue = defaultUser,
             storage = PersistManager.Storage.SHARED_PREFERENCES,
         )
@@ -118,7 +117,7 @@ class StatefulPersistManagerTest {
         val newUser = User("Alice", 30)
         user = newUser
 
-        var userNew by statefulPersistManager.persistedMutableState(
+        var userNew by persistManager.persistedMutableStateOf(
             key = "user",
             defaultValue = defaultUser,
             storage = PersistManager.Storage.SHARED_PREFERENCES,
@@ -129,7 +128,7 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testEncryptedPersistence() = runBlocking {
-        var secretData by statefulPersistManager.persistedMutableState(
+        var secretData by persistManager.persistedMutableStateOf(
             key="testEncryptedPersistence",
             defaultValue = "SecretData",
             storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
@@ -140,7 +139,7 @@ class StatefulPersistManagerTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var secretDataNew by statefulPersistManager.persistedMutableState(
+        var secretDataNew by persistManager.persistedMutableStateOf(
             key="testEncryptedPersistence",
             defaultValue = "SecretData",
             storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
@@ -151,7 +150,7 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testUnencryptedDataStorePersistence() {
-        var dataStoreValue by statefulPersistManager.persistedMutableState(
+        var dataStoreValue by persistManager.persistedMutableStateOf(
             key="dataStoreValueKey",
             defaultValue = 999,
             storage = PersistManager.Storage.DATA_STORE,
@@ -162,7 +161,7 @@ class StatefulPersistManagerTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var dataStoreValueNew by statefulPersistManager.persistedMutableState(
+        var dataStoreValueNew by persistManager.persistedMutableStateOf(
             key="dataStoreValueKey",
             defaultValue = 30,
             storage = PersistManager.Storage.DATA_STORE,
@@ -173,7 +172,7 @@ class StatefulPersistManagerTest {
 
     @Test
     fun testStateObservation() {
-        var observedValue by statefulPersistManager.persistedMutableState(
+        var observedValue by persistManager.persistedMutableStateOf(
             defaultValue = 0,
             storage = PersistManager.Storage.SHARED_PREFERENCES,
         )
