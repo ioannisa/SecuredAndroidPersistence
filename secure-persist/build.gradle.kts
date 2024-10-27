@@ -24,17 +24,18 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
 
     implementation(libs.androidx.security.crypto) // encrypted shared preferences
@@ -47,16 +48,14 @@ dependencies {
     implementation(kotlin("reflect"))
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("maven") {
-                from(components.getByName("release"))
-
-                groupId = "eu.anifantakis.lib"
-                artifactId = "secure-persist"
-                version = "1.0.0"
-            }
+// Removed the 'afterEvaluate' block and placed 'publishing' directly
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            from(components["release"])
+            groupId = "eu.anifantakis.lib"
+            artifactId = "secure-persist"
+            version = "2.3.0-beta04"
         }
     }
 }
