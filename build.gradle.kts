@@ -6,8 +6,8 @@ plugins {
     id("maven-publish")
 }
 
+group = "eu.anifantakis.lib"
+
 subprojects {
     plugins.apply("maven-publish")
-    // Set the group ID if not set in submodules
-    group = "eu.anifantakis.lib"
 }

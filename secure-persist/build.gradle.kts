@@ -48,13 +48,11 @@ dependencies {
     implementation(kotlin("reflect"))
 }
 
-// Removed the 'afterEvaluate' block and placed 'publishing' directly
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "eu.anifantakis.lib"
             artifactId = "secure-persist"
-            version = "2.3.0-beta05"
+            version = "2.3.0-beta07"
 
             afterEvaluate {
                 from(components["release"])

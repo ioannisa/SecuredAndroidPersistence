@@ -51,13 +51,11 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 }
 
-// Removed the 'afterEvaluate' block and placed 'publishing' directly
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "eu.anifantakis.lib"
             artifactId = "secure-persist-compose"
-            version = "2.3.0-beta05"
+            version = "2.3.0-beta07"
 
             afterEvaluate {
                 from(components["release"])
