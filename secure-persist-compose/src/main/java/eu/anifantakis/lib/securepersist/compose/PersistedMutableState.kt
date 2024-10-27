@@ -5,6 +5,7 @@ import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import eu.anifantakis.lib.securepersist.PersistManager
+import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -24,7 +25,8 @@ class PersistedMutableState<T>(
         get() = key ?: propertyName ?: throw IllegalArgumentException("Key cannot be null")
 
     // Initialize _state with defaultValue; will update it later
-    private var _state: MutableState<T> = mutableStateOf(defaultValue, policy = snapshotPolicy)
+    private var _state: MutableState<T> =
+        mutableStateOf(defaultValue, policy = snapshotPolicy)
 
     override var value: T
         get() = _state.value
@@ -94,18 +96,39 @@ class PersistedMutableState<T>(
     override fun component2(): (T) -> Unit = { value = it }
 }
 
-
-inline fun <reified T> PersistManager.persistedMutableStateOf(
+// Makes usage of property delegation ("by" keyword) obligatory
+inline fun <reified T> PersistManager.mutableStateOf(
     defaultValue: T,
     key: String? = null,
     storage: PersistManager.Storage = PersistManager.Storage.SHARED_PREFERENCES,
     policy: SnapshotMutationPolicy<T> = structuralEqualityPolicy()
-): PersistedMutableState<T> {
-    return PersistedMutableState(
-        defaultValue = defaultValue,
-        key = key,
-        storage = storage,
-        snapshotPolicy = policy,
-        persistManager = this
-    )
+): PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> {
+    return PropertyDelegateProvider { thisRef, property ->
+        val preferenceKey = key ?: property.name
+        PersistedMutableState(
+            defaultValue = defaultValue,
+            key = preferenceKey,
+            storage = storage,
+            snapshotPolicy = policy,
+            persistManager = this
+        )
+    }
 }
+
+
+// allows for property delegation TOGETHER with direct handling via "value" property
+
+//inline fun <reified T> PersistManager.mutableStateOf(
+//    defaultValue: T,
+//    key: String? = null,
+//    storage: PersistManager.Storage = PersistManager.Storage.SHARED_PREFERENCES,
+//    policy: SnapshotMutationPolicy<T> = structuralEqualityPolicy()
+//): PersistedMutableState<T> {
+//    return PersistedMutableState(
+//        defaultValue = defaultValue,
+//        key = key,
+//        storage = storage,
+//        snapshotPolicy = policy,
+//        persistManager = this
+//    )
+//}
