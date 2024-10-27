@@ -52,7 +52,7 @@ publishing {
     publications {
         create<MavenPublication>("release") {
             artifactId = "secure-persist"
-            version = "2.3.0-beta07"
+            version = "2.3.0-beta08"
 
             afterEvaluate {
                 from(components["release"])
