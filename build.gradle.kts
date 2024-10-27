@@ -3,15 +3,7 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.jetbrains.kotlin.android) apply false
     alias(libs.plugins.android.library) apply false
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        // JitPack repository
-        maven { url = uri("https://jitpack.io") }
-    }
+    id("maven-publish")
 }
 
 subprojects {

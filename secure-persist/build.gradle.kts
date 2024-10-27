@@ -52,10 +52,13 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("release") {
-            from(components["release"])
             groupId = "eu.anifantakis.lib"
             artifactId = "secure-persist"
-            version = "2.3.0-beta04"
+            version = "2.3.0-beta05"
+
+            afterEvaluate {
+                from(components["release"])
+            }
         }
     }
 }
