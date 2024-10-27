@@ -5,9 +5,12 @@
 ## Introduction
 
 In modern mobile apps, safeguarding user data is crucial. Whether it’s user credentials, API tokens, or any sensitive information, SecurePersist allows developers to implement robust encryption and persistence with minimal effort.
+
 > Imagine needing to securely store users’ authentication tokens in a finance app — this library will help you do that efficiently while keeping the process simple.
 
 **Android Secure Persist Library** is a pure Kotlin library designed to provide secure and efficient storage of preferences, complex data types, and files in Android applications. By leveraging the Android KeyStore and modern encryption techniques, SecurePersist ensures that sensitive data — including complex objects and files — is stored safely, protecting it from unauthorized access.
+
+With the latest addition of **State Persistence**, SecurePersist now also offers seamless integration with *Jetpack Compose*, enabling developers to persist and restore UI state effortlessly. This ensures that your Compose-based interfaces maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
 
 ## What this library does
 
@@ -33,6 +36,8 @@ This library offers a wide range of features for securely persisting data, while
 
 * **Annotation Support**: Utilizes `@SharedPref` and `@DataStorePref` annotations for convenient preference management.
 
+* **Jetpack Compose State Persistence**: Seamlessly integrates with Jetpack Compose by providing `MutableState` delegates that automatically persist and restore UI state. This ensures your Compose components maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
+
 * **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
 
 * **Asynchronous Operations**: Efficiently handles preferences with non-blocking operations using `DataStore`.
@@ -44,6 +49,8 @@ This library offers a wide range of features for securely persisting data, while
 * **Security**: Protects sensitive data with robust encryption techniques, including complex objects and files.
 
 * **Ease of Use**: Simplifies the process of managing encrypted preferences and data with a user-friendly API.
+
+* **State Persistence**: Seamlessly integrates with Jetpack Compose by providing `MutableState` delegates that automatically persist and restore UI state. This ensures your Compose components maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
 
 * **Versatility**: Supports a variety of data types, including primitives, complex objects, and files, integrating seamlessly with existing Android components.
 
@@ -58,27 +65,36 @@ This library offers a wide range of features for securely persisting data, while
 There are two ways to install this library to your project
 
 ### Option 1: By adding the Module Directly to Your Project
-The directory `secure-persist` contains the module of this library, so you can
-1. Copy the secure-persist directory from this repository into the root folder of your project.
-2. Include the Module at the bottom of your `settings.gradle` 
+The `secure-persist` directory contains the core module of this library, while `secure-persist-compose` provides additional functionality for Jetpack Compose state persistence. You can choose to include either or both based on your project's needs.
+
+1. **Copy the Modules**
+    * Copy the `secure-persist` directory from this repository into the root folder of your project.
+    * If you plan to use Jetpack Compose state persistence, also copy the `secure-persist-compose` directory.
+2. **Include the Modules** in `settings.gradle` so android recognize these folders as modules
 ```kotlin
 rootProject.name = "My App Name"
 include(":app")
-include(":secure-persist") // <-- add this line so android knows this folder is a module
+include(":secure-persist") // Core library for secure data persistence
+include(":secure-persist-compose") // Additional module for Jetpack Compose state persistence
 ```
 3. At your App-Module's `build.gradle` file dependencies, add the module that your project contains
 ```kotlin
 implementation(project(":secure-persist"))
+implementation(project(":secure-persist-compose")) 
 ```
+> **Note:** If your project does not utilize Jetpack Compose, you can omit the `secure-persist-compose` dependency.
 
 ### Option 2: Through JitPack Repository
 
-[![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/SecuredAndroidPersistence)
+[![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/secured-android-persist)
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa:SecuredAndroidPersistence:2.2.1")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.3.0")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.3.0")
 ```
+
+
 
 2. Add **Jitpack** as a dependencies repository in your `settings.gradle` (or at Project's `build.gradle` for older Android projects) for gradle to know how to fetch dependencies served by that repository:
 ```kotlin
@@ -88,6 +104,26 @@ repositories {
     maven(url = "https://jitpack.io") // <-- add this line
 }
 ```
+> **Important:** Similar to Option 1, if your project does not use Jetpack Compose, you can omit the `secure-persist-compose` dependency.
+
+
+
+### Why Two Implementation Steps?
+SecurePersist is modularized to provide flexibility based on your project's requirements:
+* **`secure-persist` (Core Library):**
+
+    * **Purpose:** Provides secure data persistence capabilities using `SharedPreferences` and `DataStore`.
+    * **Usage:** Ideal for projects that need to securely store preferences, complex data types, and files
+    
+* **`secure-persist-compose` (Jetpack Compose Integration):**
+    * **Purpose:** Extends the core library by adding Jetpack Compose state persistence functionality.
+    * **Usage:** Specifically for projects utilizing Jetpack Compose, allowing developers to persist and restore UI state effortlessly using property delegation.
+
+**Reason for Separation:** Not all Android projects use Jetpack Compose. By keeping this functionality in a separate module, developers can include it only when needed, reducing unnecessary dependencies and potential overhead in projects that do not use Compose.
+
+> **Summary:**
+    - **Include Both Modules:** If your project uses Jetpack Compose and you want to leverage state persistence alongside secure data storage.
+    - **Include Only `secure-persist`:** If your project does not use Jetpack Compose or you do not require state persistence.
 
 ---
 
@@ -448,6 +484,67 @@ CoroutineScope(Dispatchers.IO).launch {
 persistManager.dataStorePrefs.deleteDirect("key1")
 ```
 
+## Jetpack Compose State Persistence
+If you included the `secure-persist-compose` add-on module to the `secure-persist` module in your `implementation`s then you are ready to utilize another **zero-configuration secure persistence with state management**.
+
+SecurePersist seamlessly integrates with Jetpack Compose, enabling developers to persist and restore UI state effortlessly. By leveraging on more time Kotlin's property delegation, you can bind your Compose state variables to secure storage mechanisms, ensuring that your UI remains consistent across recompositions and app restarts.
+
+**Usage Example**
+Below is a code snippet demonstrating how to implement state persistence in a `ViewModel` using SecurePersist:
+
+```Kotlin
+import androidx.lifecycle.ViewModel
+import eu.anifantakis.lib.securepersist.PersistManager
+import eu.anifantakis.lib.securepersist.compose.mutableStateOf
+
+class LibCounterViewModel(
+    persistManager: PersistManager
+) : ViewModel() {
+
+    // If key is unspecified, property name becomes the key
+
+    // Defaults to EncryptedSharedPreferences and uses the property name as the key
+    var count1 by persistManager.mutableStateOf(1000)
+        private set
+
+    // Sets a custom key and uses DataStorePreferences with encryption
+    var count2 by persistManager.mutableStateOf(
+        defaultValue = 2000, 
+        key = "counter2Key",
+        storage = PersistManager.Storage.DATA_STORE_ENCRYPTED
+    )
+        private set
+
+    // Uses the property name as the key and sets storage to Unencrypted DataStorePreferences
+    var count3 by persistManager.mutableStateOf(3000,
+            storage = PersistManager.Storage.DATA_STORE
+    )
+        private set
+
+    fun increment() {
+        count1++
+        count2++
+        count3++
+    }
+}
+```
+
+#### Explanation of Each Configuration
+
+##### `count1` - Default Configuration:
+* **Usage Scenario:** When you want to store a sensitive value using the default secure storage mechanism.
+* **Behavior:** Automatically uses the property name as the key and stores the value in `EncryptedSharedPreferences`, ensuring that count1 is securely persisted without additional configuration.
+
+##### `count2` - Custom Key with Encrypted DataStore:
+* **Usage Scenario:** When you need to use a custom key and prefer DataStore with encryption for storing sensitive data.
+* **Behavior:** Allows specifying a custom key (`counter2Key`) and sets `Storage` to `DATA_STORE_ENCRYPTED` to specify DataStore with encryption usage. This is useful when you want to manage keys explicitly or need the benefits of DataStore over SharedPreferences.
+ 
+
+##### `count3` - Default Key with Unencrypted DataStore:
+* **Usage Scenario:** When storing non-sensitive data and prefer using DataStore without encryption for better performance or simplicity.
+* **Behavior:** Uses the property name (`count3`) as the key and sets `Storage` to `DATA_STORE` to specify DataStore without encryption. This is ideal for scenarios where data security is not a primary concern, and you want to leverage DataStore's advantages like type safety and better asynchronous handling.
+
+
 ---
 
 # EncryptionManager
@@ -598,9 +695,3 @@ You can find extensive tests inside the `androidTest` folder for both the `Persi
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
-
----
-
-## License
-This project is licensed under the MIT License
-Store preference in unencrypted DataStore.
