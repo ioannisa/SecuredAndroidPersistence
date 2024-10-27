@@ -357,7 +357,7 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
         return if (storage == Storage.SHARED_PREFERENCES) {
             EncryptedSharedPreference(this, defaultValue, key, type)
         } else {
-            EncryptedDataStore(this, defaultValue, key, (storage == Storage.DATA_STORE_ENCRYPTED))
+            EncryptedDataStore(this, defaultValue, key, encrypted = (storage == Storage.DATA_STORE_ENCRYPTED))
         }
     }
 

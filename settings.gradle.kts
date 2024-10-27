@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "SecuredAndroidPersistence"
 include(":app")
 include(":secure-persist")
+include(":secure-persist-compose")

@@ -37,12 +37,12 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
      * @param encrypted Whether the value is stored encrypted. Defaults to `true`.
      * @return The retrieved value.
      */
-    suspend fun <T : Any> get(key: String, defaultValue: T, encrypted: Boolean = true): T {
+    suspend fun <T> get(key: String, defaultValue: T, encrypted: Boolean = true): T {
         return if (encrypted) {
             getEncrypted(key, defaultValue)
         }
         else {
-            get(key, defaultValue)
+            getUnencrypted(key, defaultValue)
         }
     }
 
@@ -55,7 +55,7 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
      * @param encrypted Whether the value is stored encrypted. Defaults to `true`.
      * @return The retrieved value.
      */
-    fun <T: Any> getDirect(key: String, defaultValue: T, encrypted: Boolean = true): T {
+    fun <T> getDirect(key: String, defaultValue: T, encrypted: Boolean = true): T {
         return runBlocking {
             get(key, defaultValue, encrypted)
         }
@@ -136,7 +136,7 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
     }
 
     @Suppress("UNCHECKED_CAST")
-    private suspend fun <T : Any> get(key: String, defaultValue: T): T {
+    private suspend fun <T> getUnencrypted(key: String, defaultValue: T): T {
         val preferencesKey: Preferences.Key<Any> = when (defaultValue) {
             is Boolean -> booleanPreferencesKey(key)
             is Int -> intPreferencesKey(key)
@@ -159,7 +159,7 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
                 else -> {
                     val jsonString = storedValue as? String ?: return@map defaultValue
                     try {
-                        gson.fromJson(jsonString, defaultValue::class.java) as T
+                        gson.fromJson(jsonString, (defaultValue as Any)::class.java) as T
                     } catch (e: Exception) {
                         defaultValue
                     }
