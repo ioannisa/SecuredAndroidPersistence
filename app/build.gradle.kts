@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "eu.anifantakis.project.library.securedandroidpersistence"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "eu.anifantakis.project.library.securedandroidpersistence"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -30,11 +30,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     buildFeatures {
         compose = true

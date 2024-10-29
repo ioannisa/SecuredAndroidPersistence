@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "eu.anifantakis.lib.securepersist.compose"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
