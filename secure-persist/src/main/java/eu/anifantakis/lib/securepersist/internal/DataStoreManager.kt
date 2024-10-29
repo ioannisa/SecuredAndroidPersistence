@@ -72,7 +72,7 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
         if (encrypted) {
             putEncrypted(key, value)
         } else {
-            put(key, value)
+            putUnencrypted(key, value)
         }
     }
 
@@ -114,7 +114,7 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
         }
     }
 
-    private suspend fun <T> put(key: String, value: T) {
+    private suspend fun <T> putUnencrypted(key: String, value: T) {
         val preferencesKey: Preferences.Key<Any> = when (value) {
             is Boolean -> booleanPreferencesKey(key)
             is Int -> intPreferencesKey(key)

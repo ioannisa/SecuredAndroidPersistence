@@ -215,4 +215,128 @@ class PersistManagerTest {
         assertEquals(settings.notificationsEnabled, retrievedSettings.notificationsEnabled)
         assertEquals(settings.theme, retrievedSettings.theme)
     }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsSharedPrefsDirect() {
+        persistManager.delete("incrementsViaSharedPrefsDirect")
+        persistManager.sharedPrefs.put("incrementsViaSharedPrefsDirect", 1000)
+        persistManager.sharedPrefs.put("incrementsViaSharedPrefsDirect", 100)
+        persistManager.sharedPrefs.put("incrementsViaSharedPrefsDirect", persistManager.sharedPrefs.get("incrementsViaSharedPrefsDirect", 0) +1)
+        persistManager.sharedPrefs.put("incrementsViaSharedPrefsDirect", persistManager.sharedPrefs.get("incrementsViaSharedPrefsDirect", 0) +1)
+
+        assertEquals(102, persistManager.sharedPrefs.get("incrementsViaSharedPrefsDirect", 0) )
+    }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsDataStoreDirect() = runBlocking{
+        persistManager.delete("incrementsViaDataStoreDirect")
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 1000, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 100, encrypted = false)
+
+        var savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", savedValue+1, encrypted = false)
+
+        savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", savedValue+1, encrypted = false)
+
+        savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
+        assertEquals(102, savedValue)
+
+        persistManager.delete("incrementsViaDataStoreDirect")
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 1000, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 100, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false) +1, encrypted = false)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false) +1, encrypted = false)
+
+        assertEquals(102, persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false))
+    }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsDataStoreEncryptedDirect() = runBlocking{
+        persistManager.delete("incrementsViaDataStoreEncryptedDirect")
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreEncryptedDirect", 1000)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreEncryptedDirect", 100)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreEncryptedDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreEncryptedDirect", 0) +1)
+        persistManager.dataStorePrefs.put("incrementsViaDataStoreEncryptedDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreEncryptedDirect", 0) +1)
+
+        assertEquals(102, persistManager.dataStorePrefs.get("incrementsViaDataStoreEncryptedDirect", 0))
+    }
+
+    @Test
+    fun testStringsDirectSharedPref() {
+        persistManager.delete("stringsDirectSP")
+        val stringsDirectSP = persistManager.sharedPrefs.get("stringsDirectSP", "stringsDirectSP")
+        assertEquals("stringsDirectSP", stringsDirectSP)
+
+        persistManager.sharedPrefs.put("stringsDirectSP", "otherString")
+        assertEquals("otherString", persistManager.sharedPrefs.get("stringsDirectSP", ""))
+
+        val newValue = persistManager.sharedPrefs.get("stringsDirectSP", "stringsDirectSP")
+        assertEquals("otherString", newValue)
+    }
+
+    @Test
+    fun testStringsDirectSharedPrefDelegated() {
+        persistManager.delete("stringsDirectSPDelegate")
+        var stringsDirectSPDelegate by persistManager.preference("stringsDirect", storage = PersistManager.Storage.SHARED_PREFERENCES)
+        stringsDirectSPDelegate = "otherString"
+        stringsDirectSPDelegate += " plus1"
+        stringsDirectSPDelegate += " plus2"
+
+        var stringsDirectSP2 by persistManager.preference("stringsDirect2", key = "stringsDirectSPDelegate", storage = PersistManager.Storage.SHARED_PREFERENCES)
+
+        assertEquals("otherString plus1 plus2", stringsDirectSPDelegate)
+        assertEquals("otherString plus1 plus2", stringsDirectSP2)
+    }
+
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsSharedPrefsLong() {
+        persistManager.delete("incrementsViaSharedPrefsL")
+        var incrementsViaSharedPrefsL by persistManager.preference(1000L, storage = PersistManager.Storage.SHARED_PREFERENCES)
+        incrementsViaSharedPrefsL = 100L
+        incrementsViaSharedPrefsL++
+        incrementsViaSharedPrefsL++
+
+        assertEquals(102L, incrementsViaSharedPrefsL)
+    }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsSharedPrefsInt() {
+        persistManager.delete("incrementsViaSharedPrefs")
+        var incrementsViaSharedPrefs by persistManager.preference(1000, storage = PersistManager.Storage.SHARED_PREFERENCES)
+        incrementsViaSharedPrefs = 100
+        incrementsViaSharedPrefs++
+        incrementsViaSharedPrefs++
+
+        assertEquals(102, incrementsViaSharedPrefs)
+    }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsDataStore() {
+        var incrementsViaDataStore by persistManager.preference(1000, storage = PersistManager.Storage.DATA_STORE)
+        Thread.sleep(100L)
+        incrementsViaDataStore = 100
+        Thread.sleep(100L)
+        incrementsViaDataStore++
+        Thread.sleep(100L)
+        incrementsViaDataStore++
+        Thread.sleep(100L)
+
+        assertEquals(102, incrementsViaDataStore)
+    }
+
+    @Test
+    fun testCustomTypePreferenceDelegationIncrementsDataStoreEncrypted() {
+        var incrementsViaDataStoreEncrypted by persistManager.preference(1000, storage = PersistManager.Storage.DATA_STORE_ENCRYPTED)
+        Thread.sleep(100L)
+        incrementsViaDataStoreEncrypted = 100
+        Thread.sleep(100L)
+        incrementsViaDataStoreEncrypted++
+        Thread.sleep(100L)
+        incrementsViaDataStoreEncrypted++
+        Thread.sleep(100L)
+
+        assertEquals(102, incrementsViaDataStoreEncrypted)
+    }
 }
