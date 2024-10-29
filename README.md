@@ -34,8 +34,6 @@ This library offers a wide range of features for securely persisting data, while
 
 * **Property Delegation**: Uses Kotlin property delegation for seamless integration of encrypted preferences.
 
-* **Annotation Support**: Utilizes `@SharedPref` and `@DataStorePref` annotations for convenient preference management.
-
 * **Jetpack Compose State Persistence**: Seamlessly integrates with Jetpack Compose by providing `MutableState` delegates that automatically persist and restore UI state. This ensures your Compose components maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
 
 * **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
@@ -90,8 +88,8 @@ implementation(project(":secure-persist-compose"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.3.0")
-implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.3.0")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.4.0")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.4.0")
 ```
 
 
@@ -157,117 +155,47 @@ val persistManager = PersistManager(context)
 
 The `PersistManager` class currently provides multiple ways to manage `SharedPreferences` and `DataStore` preferences, offering flexibility based on your needs:
 
-1. **Using Property Delegation with Annotations**: Through the **`annotatedPreferences`** function, which leverages annotations for automatic preference handling.
+via the `sharedPrefs` instance and the `dataStorePrefs` instance exposed by the `PersistManager` class, you can access the **EncryptedSharedPreferences** and **DataStore Preferences - With Encryption Support** directly and via delegation:
 
-1. **Using Property Delegation without Annotations**: Through the **`preferences`** function, which avoids annotations and is suited for dynamic use cases where reflection-based annotations might be problematic.
-
-1. **Direct Access without Delegation**: You can manage preferences directly through two exposed instance variables:
- — **sharedPrefs instance variable** that leads to the `SharedPreferencesManager` class, responsible for managing encrypted shared preferences.
- — **dataStorePrefs instance variable** that leads to the `DataStoreManager` class, responsible for managing DataStore Preferences with encryption.
+ — **`sharedPrefs` instance variable** that leads to the `SharedPreferencesManager` class, responsible for managing encrypted shared preferences.
+ — **`dataStorePrefs` instance variable** that leads to the `DataStoreManager` class, responsible for managing DataStore Preferences with encryption.
 
 ## Preference Management using Property Delegation
 
 As mentioned, `PersistManager` simplifies the usage of encrypted `SharedPreferences` or `DataStore` preferences by supporting **property delegation** *(using the `by` keyword)*. This makes handling advanced persistence as straightforward as working with regular Kotlin properties, while also managing encryption and serialization behind the scenes.
 
-Currently, there are two ways to apply **property delegation** in `PersistManager`:
 
-* **Property Delegation with Annotations**: Via the **`annotatedPreference`** function, intended for class-level declarations. This approach allows you to define preferences using annotations for automatic delegation.
-
-* **Property Delegation without Annotations**: Via the **`preference`** function, designed for use within function bodies. This approach is ideal where annotations aren't feasible due to Kotlin reflection limitations, providing a flexible alternative for property delegation.
+Via the **`preference`** of the `sharedPrefs` and the `dataStorePrefs` you can use delegation.
 
 Both methods offer a seamless and secure way to manage preferences with minimal effort.
 
 > **Important Note:**
 **When handling DataStore Preferences via the property delegation approaches**, it's crucial to note that the system manages coroutines internally. This means that `put` operations are non-blocking, ensuring efficient data storage. However, retrieving preferences with `get` is handled in a blocking manner, which may impact performance during data access.
 
-*This distinction is important for understanding how the system balances performance and functionality when working with DataStore preferences.*
-
-### Peristence `by annotatedPreference` function
-
-You can use the following annotations to specify where and how your preferences should be stored:
-
-* **`@SharedPref`**: Indicates that the property should be stored in `SharedPreferences`.
-
-* **`@DataStorePref`**: Indicates that the property should be stored in `DataStore`. By default, `DataStore` preferences are encrypted.
-
-The **`annotatedPreference`** function creates a preference delegate that handles properties annotated with `@SharedPref` or `@DataStorePref`. This function provides a unified way to create preferences that can be stored either in SharedPreferences or DataStore, based on the annotation used on the property.
-
-**1. annotatedPreference **with** @SharedPref**
-
-```kotlin
-// assuming key as the variable name
-@SharedPref
-var myKey by persistManager.annotatedPreference("default value")
-    
-// or with a custom key
-@SharedPref(key = "myKey")
-var myVariable by persistManager.annotatedPreference("default value")
-```
-
-**2. annotatedPreference **with** @DataStorePref**
-
-**Important:** It is importamnt to note that when making use of the **DataStore Preferences** via `@DataStorePref` annotation, **the system handles coroutines internally**, which uses behind the scenes non-blocking `put`, but the `get` the preference from DataStore happens in a blocking way.
-
-```kotlin
-// assuming key as the variable name and assuming encryption
-@DataStorePref
-var myKey by persistManager.annotatedPreference("default value")
-
-// or with a custom key and disabling encryption
-@DataStorePref(key = "customKey", encrypted = false)
-var myVariable by persistManager.annotatedPreference("default value")
-```
-
-**Notes:**
-* If no key is specified in the annotation, the property name is used as the key.
-* DataStore preferences are encrypted by default. Use `encrypted = false` to store in plain text.
-
-### Peristence “by” the preference function (no annotations)
-
-The **`preference`** function allows you to create a property delegate for managing preferences without the need for annotations.
-
-While it offers the same functionality as its annotated counterpart (`annotatedPreference`), it is specifically designed for cases where annotations are impractical, such as within function bodies where Kotlin's reflection limitations can pose challenges.
-
-This makes the `preference` function a highly flexible alternative for handling preferences in dynamic contexts.
-
-*The only trade-off is that it lacks the annotations that can enhance the readability and aesthetics of the code, making it less immediately clear for someone reviewing the code compared to the annotated approach.*
-
-
 **1. `preference`** function utilizing the **`EncryptedSharedPreferences`**
 ```kotlin
 // assuming key to be the variable name (myKey) 
-// assuming storage to be SharedPreferences
-var myKey by persistManager.preference( "default value")
+var myKey by persistManager.sharedPrefs.preference( "default value")
 
 // declaring the key to be "myKey"
-// assuming storage to be SharedPreferences
-var myPref by persistManager.preference("default value", "myKey")
-
-// declaring the key to be "myKey"
-// declaring Storage to SharedPreferences
-var myPref by persistManager.preference(
-    defaultValue = "default value",
-    key = "myKey",
-    storage = PersistManager.Storage.SHARED_PREFERENCES
-)
+var myPref by persistManager.sharedPrefs.preference("default value", "myKey")
 ```
 
 **2. `preference`** fuction utilizing the **`DataStore`**
 ```kotlin
 // declaring the key to be "myKey"
 // declaring Storage to Encrypted DataStore Preferences
-var myPref by persistManager.preference(
+var myPref by persistManager.dataStorePrefs.preference(
     defaultValue = "default value",
     key = "myKey",
-    storage = PersistManager.Storage.DATA_STORE_ENCRYPTED
 )
 
 // declaring the key to be "myKey"
 // declaring Storage to Unencrypted DataStore Preferences
-var myPref by persistManager.preference(
+var myPref by persistManager.dataStorePrefs.preference(
     defaultValue = "default value",
     key = "myKey",
-    storage = PersistManager.Storage.DATA_STORE
+    encrypted = false
 )
 ```
 
@@ -275,11 +203,6 @@ var myPref by persistManager.preference(
 * If `key` is `null` or empty, the property name will be used as the key.
 * When using `DataStore`, you can specify whether the data should be encrypted by choosing the appropriate Storage.
 
-#### `Storage` Enum
-The `Storage` enum represents the types of storage available for preferences specifically for use within the preference function:
-* **`SHARED_PREFERENCES`**: Store preference in `SharedPreferences`.
-* **`DATA_STORE_ENCRYPTED`**: Store preference in encrypted `DataStore`.
-* **`DATA_STORE`**: Store preference in unencrypted `DataStore`.
 
 ### Reading and Writing persisted data with property delegation
 In the example below, we declare an encrypted shared preference managed by `PersistManager`, which handles an instance of a data class `AuthInfo`.
@@ -298,8 +221,8 @@ data class AuthInfo(
     val expiresIn: Long = 0L
 )
 
-// Assumes Storage=SHARED_PREFERENCE, and key="authInfo"
-var authInfo by persistManager.preference(AuthInfo())
+// EncryptedSharedPreferendes, and key="authInfo"
+var authInfo by persistManager.sharedPrefs.preference(AuthInfo())
 
 // Update authInfo as if it was a normal variable
 authInfo = AuthInfo(
