@@ -21,7 +21,7 @@ class CustomTypeDelegationDataStoreTest {
     )
 
     class TestClass(persistManager: PersistManager) {
-        var authInfo by persistManager.preference(storage = PersistManager.Storage.DATA_STORE_ENCRYPTED, defaultValue = AuthInfo())
+        var authInfo by persistManager.dataStorePrefs.preference(defaultValue = AuthInfo())
     }
 
     @Before
@@ -59,7 +59,7 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testCustomTypeDataStoreDelegated() {
-        val storedAuthInfo by persistManager.preference(key = "authInfo", storage =  PersistManager.Storage.DATA_STORE_ENCRYPTED, defaultValue = AuthInfo())
+        val storedAuthInfo by persistManager.dataStorePrefs.preference(key = "authInfo", defaultValue = AuthInfo())
 
         assertEquals("token123", storedAuthInfo.accessToken)
         assertEquals("refresh123", storedAuthInfo.refreshToken)
@@ -68,7 +68,7 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testCustomTypeDataStoreDelegatedChangingValue() {
-        var storedAuthInfo by persistManager.preference(key = "authInfo", storage = PersistManager.Storage.DATA_STORE_ENCRYPTED, defaultValue = AuthInfo())
+        var storedAuthInfo by persistManager.dataStorePrefs.preference(key = "authInfo", defaultValue = AuthInfo())
         storedAuthInfo = storedAuthInfo.copy(accessToken = "accessToken999")
 
         // Because the above is non-blocking lets wait before we assert
@@ -92,7 +92,7 @@ class CustomTypeDelegationDataStoreTest {
     @Test
     fun testCustomTypeDataStoreDelegation() {
         // if no key provided, SharedPreferences uses the variable name as key
-        val authInfo by persistManager.preference(storage = PersistManager.Storage.DATA_STORE_ENCRYPTED, defaultValue =  AuthInfo())
+        val authInfo by persistManager.dataStorePrefs.preference(defaultValue =  AuthInfo())
 
         assertEquals("token123", authInfo.accessToken)
         assertEquals("refresh123", authInfo.refreshToken)
@@ -101,10 +101,9 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testEncryptedDataStorePersistence() {
-        var dataStoreValue by persistManager.preference(
+        var dataStoreValue by persistManager.dataStorePrefs.preference(
             key="dataStoreValueKey",
-            defaultValue = 999,
-            storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
+            defaultValue = 999
         )
 
         dataStoreValue = 12345
@@ -112,10 +111,9 @@ class CustomTypeDelegationDataStoreTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var dataStoreValueNew by persistManager.preference(
+        val dataStoreValueNew by persistManager.dataStorePrefs.preference(
             key="dataStoreValueKey",
             defaultValue = 30,
-            storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
         )
 
         assertEquals(12345, dataStoreValueNew)
@@ -123,10 +121,10 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testUnencryptedDataStorePersistence() {
-        var dataStoreValue by persistManager.preference(
+        var dataStoreValue by persistManager.dataStorePrefs.preference(
             key="dataStoreValueKeyUnencrypted",
             defaultValue = 999,
-            storage = PersistManager.Storage.DATA_STORE,
+            encrypted = false
         )
 
         dataStoreValue = 12345
@@ -134,10 +132,10 @@ class CustomTypeDelegationDataStoreTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var dataStoreValueNew by persistManager.preference(
+        val dataStoreValueNew by persistManager.dataStorePrefs.preference(
             key="dataStoreValueKeyUnencrypted",
             defaultValue = 30,
-            storage = PersistManager.Storage.DATA_STORE,
+            encrypted = false
         )
 
         assertEquals(12345, dataStoreValueNew)
@@ -145,7 +143,7 @@ class CustomTypeDelegationDataStoreTest {
 
     @Test
     fun testCustomTypeDataStoreDelegationSetKey() {
-        val storedAuthInfo by persistManager.preference(AuthInfo(), "authInfo", PersistManager.Storage.DATA_STORE_ENCRYPTED)
+        val storedAuthInfo by persistManager.dataStorePrefs.preference(AuthInfo(), "authInfo")
 
         assertEquals("token123", storedAuthInfo.accessToken)
         assertEquals("refresh123", storedAuthInfo.refreshToken)

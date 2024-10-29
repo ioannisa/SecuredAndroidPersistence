@@ -6,6 +6,11 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import eu.anifantakis.lib.securepersist.EncryptedPreference
+import eu.anifantakis.lib.securepersist.SecurePersistSolution
+import java.lang.reflect.Type
+import kotlin.reflect.KProperty
 
 /**
  * Manages encrypted shared preferences using Android's `EncryptedSharedPreferences`.
@@ -17,10 +22,9 @@ import com.google.gson.Gson
  * @constructor Creates an instance of [SharedPreferencesManager] with encrypted shared preferences.
  * @param context The application context.
  */
-class SharedPreferencesManager(context: Context) {
+class SharedPreferencesManager(private val context: Context, private val gson: Gson) : SecurePersistSolution {
 
     private val sharedPreferences: SharedPreferences
-    private val gson = Gson()
 
     init {
         // Create or retrieve the MasterKey for encryption
@@ -134,6 +138,76 @@ class SharedPreferencesManager(context: Context) {
     fun delete(key: String) {
         sharedPreferences.edit(commit = true) {
             remove(key)
+        }
+    }
+
+    /**
+     * Creates a preference delegate for storing EncryptedSharedPreferences
+     *
+     * **Usage:**
+     *   ```kotlin
+     *   val myPref by persistManager.sharedPrefs.preference("default value", key = "myKey")
+     *   ```
+     *
+     * **Notes:**
+     * - If `key` is null or empty, the property name will be used as the key.
+     * - When using DataStore, you can specify whether the data should be encrypted by choosing the appropriate `StorageType`.
+     *
+     * @param defaultValue The default value to be used if no value is stored for the preference.
+     * @param key The key for the preference. If null or empty, the property name will be used.
+     * @return An `EncryptedSharedPreference`
+     */
+    inline fun <reified T : Any> preference(defaultValue: T, key: String? = null): EncryptedPreference<T> {
+        val type: Type = object : TypeToken<T>() {}.type
+        return EncryptedSharedPreference(defaultValue, key, type)
+    }
+
+    /**
+     * Class to handle encrypted SharedPreferences using property delegation.
+     *
+     * @param T The type of the preference value.
+     * @property defaultValue The default value for the preference.
+     * @property key The key for the preference. If null or empty, the property name will be used.
+     * @property type The TypeToken of the preference value.
+     */
+    inner class EncryptedSharedPreference<T> (
+        private val defaultValue: T,
+        private val key: String? = null,
+        private val type: Type,
+    ) : EncryptedPreference<T> {
+
+        override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
+
+            return when (defaultValue) {
+                is Boolean, is Int, is Float, is Long, is Double, is String -> {
+                    get(preferenceKey, defaultValue)
+                }
+                else -> {
+                    // For complex objects, check if exists first
+                    val storedValue = get(preferenceKey, "")
+                    if (storedValue.isEmpty()) {
+                        defaultValue
+                    } else {
+                        // Deserialize JSON string to object using the provided type
+                        gson.fromJson(storedValue, type) as T
+                    }
+                }
+            }
+        }
+
+        override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
+            when (value) {
+                is Boolean, is Int, is Float, is Long, is Double, is String -> {
+                    put(preferenceKey, value)
+                }
+                else -> {
+                    // Serialize object to JSON string
+                    val jsonString = gson.toJson(value)
+                    put(preferenceKey, jsonString)
+                }
+            }
         }
     }
 }

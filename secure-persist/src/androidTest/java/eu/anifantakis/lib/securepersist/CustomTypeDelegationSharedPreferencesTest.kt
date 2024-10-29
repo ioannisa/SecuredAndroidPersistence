@@ -20,13 +20,8 @@ class CustomTypeDelegationSharedPreferencesTest {
     )
 
     class TestClass(persistManager: PersistManager) {
-        // delegated without annotations (can be used also locally)
-        @SharedPref
-        var authInfo by persistManager.annotatedPreference(AuthInfo())
-
-        // delegated using annotations (due to reflection can only be used as class field)
-        @SharedPref(key = "authInfo")
-        var authInfo2 by persistManager.annotatedPreference(AuthInfo())
+        var authInfo by persistManager.sharedPrefs.preference(AuthInfo())
+        var authInfo2 by persistManager.sharedPrefs.preference(AuthInfo(), key = "authInfo")
     }
 
     @Before
@@ -63,7 +58,7 @@ class CustomTypeDelegationSharedPreferencesTest {
     @Test
     fun testCustomTypePreferenceDelegation() {
         // if no key provided, SharedPreferences uses the variable name as key
-        val authInfo by persistManager.preference(AuthInfo())
+        val authInfo by persistManager.sharedPrefs.preference(AuthInfo())
 
         assertEquals("token123", authInfo.accessToken)
         assertEquals("refresh123", authInfo.refreshToken)
@@ -73,7 +68,7 @@ class CustomTypeDelegationSharedPreferencesTest {
     @Test
     fun testCustomTypePreferenceDelegationSetKey() {
         // if a key is provided, it will be used by SharedPreference as a key
-        val storedAuthInfo by persistManager.preference(AuthInfo(), "authInfo")
+        val storedAuthInfo by persistManager.sharedPrefs.preference(AuthInfo(), "authInfo")
 
         assertEquals("token123", storedAuthInfo.accessToken)
         assertEquals("refresh123", storedAuthInfo.refreshToken)

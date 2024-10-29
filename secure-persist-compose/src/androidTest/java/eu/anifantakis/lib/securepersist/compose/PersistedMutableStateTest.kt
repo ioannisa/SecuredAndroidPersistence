@@ -41,10 +41,9 @@ class PersistedMutableStateTest {
     fun testInitializationWithDefaultValue() {
         persistManager.delete("testKey")
 
-        var testValue by persistManager.mutableStateOf(
+        val testValue by persistManager.sharedPrefs.mutableStateOf(
             defaultValue = 42,
-            key = "testKey",
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
+            key = "testKey"
         )
 
         Assert.assertEquals(42, testValue)
@@ -52,18 +51,16 @@ class PersistedMutableStateTest {
 
     @Test
     fun testPersistenceOfUpdatedValue() {
-        var testValue by persistManager.mutableStateOf(
+        var testValue by persistManager.sharedPrefs.mutableStateOf(
             defaultValue = 10,
-            key = "testKey",
-            storage = PersistManager.Storage.SHARED_PREFERENCES
+            key = "testKey"
         )
 
         testValue = 100
 
-        var testValueNew by persistManager.mutableStateOf(
+        val testValueNew by persistManager.sharedPrefs.mutableStateOf(
             defaultValue = 20,
-            key = "testKey",
-            storage = PersistManager.Storage.SHARED_PREFERENCES
+            key = "testKey"
         )
 
         Assert.assertEquals(100, testValueNew)
@@ -71,17 +68,15 @@ class PersistedMutableStateTest {
 
     @Test
     fun testStringPersistence() {
-        var testString by persistManager.mutableStateOf(
-            defaultValue = "default1",
-            storage = PersistManager.Storage.SHARED_PREFERENCES
+        var testString by persistManager.sharedPrefs.mutableStateOf(
+            defaultValue = "default1"
         )
 
         testString = "Updated Text"
 
-        var testStringNew by persistManager.mutableStateOf(
+        val testStringNew by persistManager.sharedPrefs.mutableStateOf(
             key = "testString",
-            defaultValue = "default2",
-            storage = PersistManager.Storage.SHARED_PREFERENCES
+            defaultValue = "default2"
         )
 
         Assert.assertEquals("Updated Text", testStringNew)
@@ -89,17 +84,15 @@ class PersistedMutableStateTest {
 
     @Test
     fun testBooleanPersistence() {
-        var testBoolean by persistManager.mutableStateOf(
+        var testBoolean by persistManager.sharedPrefs.mutableStateOf(
             key = "testBooleanNew",
-            defaultValue = false,
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
+            defaultValue = false
         )
 
         testBoolean = true
 
-        var testBooleanNew by persistManager.mutableStateOf(
-            defaultValue = false,
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
+        val testBooleanNew by persistManager.sharedPrefs.mutableStateOf(
+            defaultValue = false
         )
 
         Assert.assertTrue(testBooleanNew)
@@ -109,18 +102,16 @@ class PersistedMutableStateTest {
     fun testCustomObjectPersistence() {
         val defaultUser = User("Default", 0)
 
-        var user by persistManager.mutableStateOf(
-            defaultValue = defaultUser,
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
+        var user by persistManager.sharedPrefs.mutableStateOf(
+            defaultValue = defaultUser
         )
 
         val newUser = User("Alice", 30)
         user = newUser
 
-        var userNew by persistManager.mutableStateOf(
+        val userNew by persistManager.sharedPrefs.mutableStateOf(
             key = "user",
             defaultValue = defaultUser,
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
         )
 
         Assert.assertEquals(newUser, userNew)
@@ -128,10 +119,9 @@ class PersistedMutableStateTest {
 
     @Test
     fun testEncryptedPersistence() = runBlocking {
-        var secretData by persistManager.mutableStateOf(
+        var secretData by persistManager.dataStorePrefs.mutableStateOf(
             key="testEncryptedPersistence",
-            defaultValue = "SecretData",
-            storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
+            defaultValue = "SecretData"
         )
 
         secretData = "EncryptedValue"
@@ -139,10 +129,9 @@ class PersistedMutableStateTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var secretDataNew by persistManager.mutableStateOf(
+        val secretDataNew by persistManager.dataStorePrefs.mutableStateOf(
             key="testEncryptedPersistence",
-            defaultValue = "SecretData",
-            storage = PersistManager.Storage.DATA_STORE_ENCRYPTED,
+            defaultValue = "SecretData"
         )
 
         Assert.assertEquals("EncryptedValue", secretDataNew)
@@ -150,10 +139,10 @@ class PersistedMutableStateTest {
 
     @Test
     fun testUnencryptedDataStorePersistence() {
-        var dataStoreValue by persistManager.mutableStateOf(
+        var dataStoreValue by persistManager.dataStorePrefs.mutableStateOf(
             key="dataStoreValueKey",
             defaultValue = 999,
-            storage = PersistManager.Storage.DATA_STORE,
+            encrypted = false,
         )
 
         dataStoreValue = 12345
@@ -161,10 +150,10 @@ class PersistedMutableStateTest {
         // Because the above is non-blocking lets wait before we assert
         Thread.sleep(200L)
 
-        var dataStoreValueNew by persistManager.mutableStateOf(
+        val dataStoreValueNew by persistManager.dataStorePrefs.mutableStateOf(
             key="dataStoreValueKey",
             defaultValue = 30,
-            storage = PersistManager.Storage.DATA_STORE,
+            encrypted = false
         )
 
         Assert.assertEquals(12345, dataStoreValueNew)
@@ -172,9 +161,8 @@ class PersistedMutableStateTest {
 
     @Test
     fun testStateObservation() {
-        var observedValue by persistManager.mutableStateOf(
-            defaultValue = 0,
-            storage = PersistManager.Storage.SHARED_PREFERENCES,
+        var observedValue by persistManager.sharedPrefs.mutableStateOf(
+            defaultValue = 0
         )
 
         observedValue = 10

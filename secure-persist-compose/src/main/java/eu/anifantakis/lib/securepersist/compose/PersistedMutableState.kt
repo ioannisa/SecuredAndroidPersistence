@@ -5,6 +5,9 @@ import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.structuralEqualityPolicy
 import eu.anifantakis.lib.securepersist.PersistManager
+import eu.anifantakis.lib.securepersist.SecurePersistSolution
+import eu.anifantakis.lib.securepersist.internal.DataStoreManager
+import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -22,7 +25,6 @@ import kotlin.reflect.KProperty
  * @property key The key used for persisting the state. If `null`, the property's name is used.
  * @property storage The storage mechanism to use for persisting the state. Defaults to `SHARED_PREFERENCES`.
  * @property snapshotPolicy The policy to determine state equality. Defaults to structural equality.
- * @property persistManager The [PersistManager] instance responsible for handling persistence.
  *
  * @constructor Creates a new instance of [PersistedMutableState].
  *
@@ -34,9 +36,9 @@ import kotlin.reflect.KProperty
 class PersistedMutableState<T>(
     private val defaultValue: T,
     private val key: String?,
-    private val storage: PersistManager.Storage,
+    private val storage: Storage,
     private val snapshotPolicy: SnapshotMutationPolicy<T>,
-    private val persistManager: PersistManager
+    private val securePersistSolution: SecurePersistSolution
 ) : MutableState<T>, ReadWriteProperty<Any?, T> {
 
     /**
@@ -121,16 +123,18 @@ class PersistedMutableState<T>(
      */
     private fun getPersistedValue(): T {
         return when (storage) {
-            PersistManager.Storage.SHARED_PREFERENCES -> {
-                persistManager.sharedPrefs.get(preferenceKey, defaultValue)
+
+            Storage.SHARED_PREFERENCES -> {
+                (securePersistSolution as SharedPreferencesManager).get(preferenceKey, defaultValue)
             }
-            PersistManager.Storage.DATA_STORE, PersistManager.Storage.DATA_STORE_ENCRYPTED -> {
-                persistManager.dataStorePrefs.getDirect(
+            Storage.DATA_STORE, Storage.DATA_STORE_ENCRYPTED -> {
+                (securePersistSolution as DataStoreManager).getDirect(
                     preferenceKey,
                     defaultValue,
-                    storage == PersistManager.Storage.DATA_STORE_ENCRYPTED
+                    storage == Storage.DATA_STORE_ENCRYPTED
                 )
             }
+
         }
     }
 
@@ -141,14 +145,14 @@ class PersistedMutableState<T>(
      */
     private fun saveValue(value: T) {
         when (storage) {
-            PersistManager.Storage.SHARED_PREFERENCES -> {
-                persistManager.sharedPrefs.put(preferenceKey, value)
+            Storage.SHARED_PREFERENCES -> {
+                (securePersistSolution as SharedPreferencesManager).put(preferenceKey, value)
             }
-            PersistManager.Storage.DATA_STORE, PersistManager.Storage.DATA_STORE_ENCRYPTED -> {
-                persistManager.dataStorePrefs.putDirect(
+            Storage.DATA_STORE, Storage.DATA_STORE_ENCRYPTED -> {
+                (securePersistSolution as DataStoreManager).putDirect(
                     preferenceKey,
                     value,
-                    storage == PersistManager.Storage.DATA_STORE_ENCRYPTED
+                    storage == Storage.DATA_STORE_ENCRYPTED
                 )
             }
         }
@@ -167,6 +171,24 @@ class PersistedMutableState<T>(
      * @return A lambda that sets the value of the state.
      */
     override fun component2(): (T) -> Unit = { value = it }
+
+    /**
+     * Enum representing the types of storage available for preferences.
+     */
+    enum class Storage {
+        /**
+         * Store preference in SharedPreferences.
+         */
+        SHARED_PREFERENCES,
+        /**
+         * Store preference in encrypted DataStore.
+         */
+        DATA_STORE_ENCRYPTED,
+        /**
+         * Store preference in unencrypted DataStore.
+         */
+        DATA_STORE
+    }
 }
 
 /**
@@ -179,17 +201,16 @@ class PersistedMutableState<T>(
  * @param T The type of the state value.
  * @param defaultValue The default value of the state if no persisted value exists.
  * @param key The key used for persisting the state. If `null`, the property's name is used.
- * @param storage The storage mechanism to use for persisting the state. Defaults to `SHARED_PREFERENCES`.
  * @param policy The policy to determine state equality. Defaults to structural equality.
  *
  * @return A [PropertyDelegateProvider] that must be used with the `by` keyword for property delegation.
  *
  * @throws IllegalArgumentException If both [key] and the property's name are `null`.
  */
-inline fun <reified T> PersistManager.mutableStateOf(
+inline fun <reified T> DataStoreManager.mutableStateOf(
     defaultValue: T,
     key: String? = null,
-    storage: PersistManager.Storage = PersistManager.Storage.SHARED_PREFERENCES,
+    encrypted: Boolean = true,
     policy: SnapshotMutationPolicy<T> = structuralEqualityPolicy()
 ): PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> {
     return PropertyDelegateProvider { thisRef, property ->
@@ -197,9 +218,42 @@ inline fun <reified T> PersistManager.mutableStateOf(
         PersistedMutableState(
             defaultValue = defaultValue,
             key = preferenceKey,
-            storage = storage,
+            storage = if (encrypted) PersistedMutableState.Storage.DATA_STORE_ENCRYPTED else PersistedMutableState.Storage.DATA_STORE,
             snapshotPolicy = policy,
-            persistManager = this
+            securePersistSolution = this
+        )
+    }
+}
+
+/**
+ * Provides a property delegate for a persisted mutable state.
+ *
+ * This extension function on [PersistManager] enforces the use of property delegation
+ * via the `by` keyword. Attempting to use it without delegation will result in a
+ * compilation error, ensuring that the state is correctly managed and persisted.
+ *
+ * @param T The type of the state value.
+ * @param defaultValue The default value of the state if no persisted value exists.
+ * @param key The key used for persisting the state. If `null`, the property's name is used.
+ * @param policy The policy to determine state equality. Defaults to structural equality.
+ *
+ * @return A [PropertyDelegateProvider] that must be used with the `by` keyword for property delegation.
+ *
+ * @throws IllegalArgumentException If both [key] and the property's name are `null`.
+ */
+inline fun <reified T> SharedPreferencesManager.mutableStateOf(
+    defaultValue: T,
+    key: String? = null,
+    policy: SnapshotMutationPolicy<T> = structuralEqualityPolicy()
+): PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> {
+    return PropertyDelegateProvider { thisRef, property ->
+        val preferenceKey = key ?: property.name
+        PersistedMutableState(
+            defaultValue = defaultValue,
+            key = preferenceKey,
+            snapshotPolicy = policy,
+            storage = PersistedMutableState.Storage.SHARED_PREFERENCES,
+            securePersistSolution = this
         )
     }
 }
@@ -220,3 +274,5 @@ inline fun <reified T> PersistManager.mutableStateOf(
 //        persistManager = this
 //    )
 //}
+
+

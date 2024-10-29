@@ -1,9 +1,18 @@
 package eu.anifantakis.lib.securepersist.internal
 
 import android.content.Context
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
+import eu.anifantakis.lib.securepersist.EncryptedPreference
+import eu.anifantakis.lib.securepersist.SecurePersistSolution
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.reflect.KProperty
 
 private val Context.dataStore by preferencesDataStore("encrypted_datastore")
 
@@ -24,10 +34,9 @@ private val Context.dataStore by preferencesDataStore("encrypted_datastore")
  *
  * @property encryptionManager The encryption manager used for encrypting and decrypting data.
  */
-class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager) {
+class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager, private val gson: Gson) : SecurePersistSolution{
 
     private val dataStore = context.dataStore
-    private val gson = Gson()
 
     /**
      * Retrieves a value from DataStore, optionally decrypting it.
@@ -213,5 +222,51 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
             preferences[dataKey]
         }.first() ?: return defaultValue
         return encryptionManager.decryptValue(encryptedValue, defaultValue)
+    }
+
+    /**
+     * Creates a preference delegate for storing Encrypted DataStore Preferences
+     *
+     * **Usage:**
+     *   ```kotlin
+     *   val myPref by persistManager.sharedPrefs.preference("default value", key = "myKey")
+     *   ```
+     *
+     * **Notes:**
+     * - If `key` is null or empty, the property name will be used as the key.
+     * - When using DataStore, you can specify whether the data should be encrypted by choosing the appropriate `StorageType`.
+     *
+     * @param defaultValue The default value to be used if no value is stored for the preference.
+     * @param key The key for the preference. If null or empty, the property name will be used.
+     * @return An `EncryptedSharedPreference`
+     */
+    inline fun <reified T : Any> preference(defaultValue: T, key: String? = null, encrypted: Boolean = true): EncryptedPreference<T> {
+        return EncryptedDataStore(defaultValue, key, encrypted)
+    }
+
+    /**
+     * Class to handle encrypted DataStore preferences using property delegation.
+     *
+     * @param T The type of the preference value.
+     * @property defaultValue The default value for the preference.
+     * @property key The key for the preference. If null or empty, the property name will be used.
+     * @property encrypted Whether the preference should be stored encrypted. Defaults to true.
+     */
+    inner class EncryptedDataStore<T : Any>(
+        private val defaultValue: T,
+        private val key: String? = null,
+        private val encrypted: Boolean = true
+    ) : EncryptedPreference<T> {
+        override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
+            val storedValue = getDirect<T>(preferenceKey, defaultValue, encrypted)
+            return storedValue
+        }
+
+        override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+            val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
+            putDirect(preferenceKey, value, encrypted)
+        }
     }
 }
