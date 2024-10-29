@@ -232,19 +232,6 @@ class PersistManagerTest {
         persistManager.delete("incrementsViaDataStoreDirect")
         persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 1000, encrypted = false)
         persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 100, encrypted = false)
-
-        var savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
-        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", savedValue+1, encrypted = false)
-
-        savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
-        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", savedValue+1, encrypted = false)
-
-        savedValue = persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false)
-        assertEquals(102, savedValue)
-
-        persistManager.delete("incrementsViaDataStoreDirect")
-        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 1000, encrypted = false)
-        persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", 100, encrypted = false)
         persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false) +1, encrypted = false)
         persistManager.dataStorePrefs.put("incrementsViaDataStoreDirect", persistManager.dataStorePrefs.get("incrementsViaDataStoreDirect", 0, encrypted = false) +1, encrypted = false)
 
@@ -304,7 +291,7 @@ class PersistManagerTest {
     @Test
     fun testCustomTypePreferenceDelegationIncrementsSharedPrefsInt() {
         persistManager.delete("incrementsViaSharedPrefs")
-        var incrementsViaSharedPrefs by persistManager.preference(1000, storage = PersistManager.Storage.SHARED_PREFERENCES)
+        var incrementsViaSharedPrefs by persistManager.preference(defaultValue = 1000, storage = PersistManager.Storage.SHARED_PREFERENCES)
         incrementsViaSharedPrefs = 100
         incrementsViaSharedPrefs++
         incrementsViaSharedPrefs++

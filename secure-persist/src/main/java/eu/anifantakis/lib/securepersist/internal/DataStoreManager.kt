@@ -117,16 +117,33 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
     private suspend fun <T> putUnencrypted(key: String, value: T) {
         val preferencesKey: Preferences.Key<Any> = when (value) {
             is Boolean -> booleanPreferencesKey(key)
-            is Int -> intPreferencesKey(key)
-            is Float -> floatPreferencesKey(key)
-            is Long -> longPreferencesKey(key)
+            is Number -> {
+                when {
+                    value is Int || (value is Long && value in Int.MIN_VALUE..Int.MAX_VALUE) ->
+                        intPreferencesKey(key)
+                    value is Long -> longPreferencesKey(key)
+                    value is Float -> floatPreferencesKey(key)
+                    value is Double -> doublePreferencesKey(key)
+                    else -> stringPreferencesKey(key)
+                }
+            }
             is String -> stringPreferencesKey(key)
-            is Double -> doublePreferencesKey(key)
             else -> stringPreferencesKey(key)
         } as Preferences.Key<Any>
 
         val storedValue: Any = when (value) {
-            is Boolean, is Int, is Float, is Long, is String, is Double -> value
+            is Boolean -> value
+            is Number -> {
+                when {
+                    value is Int || (value is Long && value in Int.MIN_VALUE..Int.MAX_VALUE) ->
+                        value.toInt()
+                    value is Long -> value
+                    value is Float -> value
+                    value is Double -> value
+                    else -> value
+                }
+            }
+            is String -> value
             else -> gson.toJson(value)
         }
 
@@ -151,9 +168,21 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
             val storedValue = preferences[preferencesKey]
             when (defaultValue) {
                 is Boolean -> storedValue as? Boolean ?: defaultValue
-                is Int -> storedValue as? Int ?: defaultValue
+                is Int -> {
+                    when (storedValue) {
+                        is Int -> storedValue
+                        is Long -> if (storedValue in Int.MIN_VALUE..Int.MAX_VALUE) storedValue.toInt() else defaultValue
+                        else -> defaultValue
+                    }
+                }
+                is Long -> {
+                    when (storedValue) {
+                        is Long -> storedValue
+                        is Int -> storedValue.toLong()
+                        else -> defaultValue
+                    }
+                }
                 is Float -> storedValue as? Float ?: defaultValue
-                is Long -> storedValue as? Long ?: defaultValue
                 is String -> storedValue as? String ?: defaultValue
                 is Double -> storedValue as? Double ?: defaultValue
                 else -> {

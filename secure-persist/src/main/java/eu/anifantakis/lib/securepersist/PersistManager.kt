@@ -100,16 +100,17 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
             )
 
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
-            val storedValue = persist.sharedPrefs.get(preferenceKey, "")
 
-            return if (storedValue.isEmpty()) {
-                defaultValue
-            } else {
-                when (defaultValue) {
-                    is Boolean, is Int, is Float, is Long, is Double, is String -> {
-                        persist.sharedPrefs.get(preferenceKey, defaultValue)
-                    }
-                    else -> {
+            return when (defaultValue) {
+                is Boolean, is Int, is Float, is Long, is Double, is String -> {
+                    persist.sharedPrefs.get(preferenceKey, defaultValue)
+                }
+                else -> {
+                    // For complex objects, check if exists first
+                    val storedValue = persist.sharedPrefs.get(preferenceKey, "")
+                    if (storedValue.isEmpty()) {
+                        defaultValue
+                    } else {
                         // Deserialize JSON string to object using the provided type
                         gson.fromJson(storedValue, type) as T
                     }
@@ -201,23 +202,23 @@ class PersistManager(context: Context, keyAlias: String = "keyAlias") {
             if (sharedPrefAnnotation != null) {
                 val annotatedKey = sharedPrefAnnotation.key.trim()
                 val preferenceKey = annotatedKey.trim().takeIf { it.isNotEmpty() } ?: property.name
-                val storedValue = persist.sharedPrefs.get(preferenceKey, "")
 
-                return if (storedValue.isEmpty()) {
-                    defaultValue
-                } else {
-                    when (defaultValue) {
-                        is Boolean, is Int, is Float, is Long, is Double, is String -> {
-                            persist.sharedPrefs.get(preferenceKey, defaultValue)
-                        }
-                        else -> {
+                return when (defaultValue) {
+                    is Boolean, is Int, is Float, is Long, is Double, is String -> {
+                        persist.sharedPrefs.get(preferenceKey, defaultValue)
+                    }
+                    else -> {
+                        // For complex objects, check if exists first
+                        val storedValue = persist.sharedPrefs.get(preferenceKey, "")
+                        if (storedValue.isEmpty()) {
+                            defaultValue
+                        } else {
                             // Deserialize JSON string to object using the provided type
                             gson.fromJson(storedValue, type) as T
                         }
                     }
                 }
             }
-
             else if (dataStorePrefAnnotation != null) {
                 val annotatedKey = dataStorePrefAnnotation.key.trim()
                 val preferenceKey = annotatedKey.trim().takeIf { it.isNotEmpty() } ?: property.name

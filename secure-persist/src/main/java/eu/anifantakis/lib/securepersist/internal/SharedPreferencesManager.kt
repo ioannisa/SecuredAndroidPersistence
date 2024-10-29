@@ -2,7 +2,6 @@ package eu.anifantakis.lib.securepersist.internal
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -56,14 +55,7 @@ class SharedPreferencesManager(context: Context) {
                 sharedPreferences.edit(commit = true) {
                     when (value) {
                         is Boolean -> putBoolean(key, value)
-                        is Int -> {
-
-                            putInt(key, value)
-                            Log.d("DEBUGGING_NOW", "int -> key: $key, put: $value")
-
-
-
-                        }
+                        is Int -> putInt(key, value)
                         is Float -> putFloat(key, value)
                         is Long -> putLong(key, value)
                         is String -> putString(key, value)
@@ -100,15 +92,9 @@ class SharedPreferencesManager(context: Context) {
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String, defaultValue: T): T {
 
-        Log.d("DEBUGGING_NOW", "type: ${defaultValue!!::class.simpleName}")
-
         return when (defaultValue) {
             is Boolean -> sharedPreferences.getBoolean(key, defaultValue) as T
-            is Int -> {
-
-                Log.d("DEBUGGING_NOW", "int -> key: $key, get: ${sharedPreferences.getInt(key, defaultValue) }")
-                sharedPreferences.getInt(key, defaultValue) as T
-            }
+            is Int ->  sharedPreferences.getInt(key, defaultValue) as T
             is Float -> sharedPreferences.getFloat(key, defaultValue) as T
             is Long -> {
                 if (defaultValue in Int.MIN_VALUE..Int.MAX_VALUE) {
@@ -123,7 +109,7 @@ class SharedPreferencesManager(context: Context) {
                     sharedPreferences.getLong(key, defaultValue) as T
                 }
             }
-            is String -> sharedPreferences.getString(key, defaultValue) as T
+            is String ->  sharedPreferences.getString(key, defaultValue) as T
             is Double -> {
                 val stringValue = sharedPreferences.getString(key, null)
                 stringValue?.toDouble() as T? ?: defaultValue
