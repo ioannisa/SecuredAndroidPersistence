@@ -26,6 +26,8 @@ So this library makes it easy for developers to
 
 This library offers a wide range of features for securely persisting data, while also providing encryption services for raw data and files when needed.
 
+### Feature Set 1 - Encrypted Persistence
+
 * **Secure Preferences Management**: Easily encrypts and decrypts preferences utilizing `SharedPreferences` and `DataStore`.
 
 * **Support for Complex Data Types**: Automatically **serializes** and securely stores complex objects, including custom classes and collections.
@@ -36,9 +38,10 @@ This library offers a wide range of features for securely persisting data, while
 
 * **Jetpack Compose State Persistence**: Seamlessly integrates with Jetpack Compose by providing `MutableState` delegates that automatically persist and restore UI state. This ensures your Compose components maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
 
-* **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
-
+### Feature Set 2 - Raw Encryption
 * **Asynchronous Operations**: Efficiently handles preferences with non-blocking operations using `DataStore`.
+
+* **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
 
 * **External Key Management**: Allows for custom external keys for scenarios requiring cross-device data decryption or storing the key on a remote server.
 
