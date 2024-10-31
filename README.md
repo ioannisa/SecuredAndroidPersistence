@@ -36,12 +36,13 @@ This library offers a wide range of features for securely persisting data, while
 
 * **Property Delegation**: Uses Kotlin property delegation for seamless integration of encrypted preferences.
 
+* **Asynchronous Operations**: Efficiently handles preferences with non-blocking operations using `DataStore`.
+
 * **Jetpack Compose State Persistence**: Seamlessly integrates with Jetpack Compose by providing `MutableState` delegates that automatically persist and restore UI state. This ensures your Compose components maintain consistent and secure state across recompositions and app restarts without additional boilerplate.
 
 ### Feature Set 2 - Raw Encryption
-* **Asynchronous Operations**: Efficiently handles preferences with non-blocking operations using `DataStore`.
 
-* **Raw Data Encryption**: Directly encrypts and decrypts raw data and files using `EncryptionManager` for additional flexibility.
+* **Raw Data Encryption**: Directly encrypts and decrypts raw **data and files** using `EncryptionManager` for additional flexibility.
 
 * **External Key Management**: Allows for custom external keys for scenarios requiring cross-device data decryption or storing the key on a remote server.
 
