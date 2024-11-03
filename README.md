@@ -479,38 +479,68 @@ The `EncryptionManager` can be used independently of `PersistManager`, offering 
 
 It provides two flexible key management options:
 
-1. **KeyStore Integration**: Leverages Android’s **`KeyStore`** for hardware-backed encryption, where keys are securely managed within the device's hardware chip.
+1. **KeyStore Integration**: Leverages Android's **`KeyStore`** for hardware-backed encryption, where keys are securely managed within the device's hardware chip.
 
-1. **External Keys**: Allows you to generate and manage your own **`SecretKey`** outside of KeyStore. This is useful if you need to store keys remotely, for instance, when encrypting data that will also be stored on a remote server.
+2. **External Keys**: Allows you to generate and manage your own **`SecretKey`** outside of KeyStore. This is useful if you need to store keys remotely, for instance, when encrypting data that will also be stored on a remote server.
+
 ### Initialization
 
 #### You can initialize using the `KeyStore`
 ```kotlin
+// Simple initialization with default secure configuration
 val encryptionManager = EncryptionManager(context, "your_key_alias")
 ```
 
-#### You can initialize using the `External Key` to generate a `SecretKey`
-
+#### You can initialize using an `External Key`
 ```kotlin
-// First, generate an external key:
+// Generate an external key with default secure configuration
 val externalKey = EncryptionManager.generateExternalKey()
 
-// Then, use the generated key to create an instance of EncryptionManager:
+// Initialize with external key
 val encryptionManager = EncryptionManager(context, externalKey)
 ```
 
 #### Encryption Details
+
+EncryptionManager provides secure encryption using Android's recommended security standards by default:
+
 * **Algorithm:** AES (Advanced Encryption Standard)
 * **Mode:** GCM (Galois/Counter Mode)
 * **Padding:** No Padding (GCM handles it internally)
-* **Key Management:** Managed by Android KeyStore
 * **Key Strength:** 256-bit keys for strong encryption
 
-AES in GCM mode is an authenticated encryption algorithm that provides both data confidentiality and integrity. Using the Android KeyStore for key management adds an extra layer of security by storing keys in a secure, hardware-backed environment.
+This default configuration provides high security and is the same one used by Android's `EncryptedSharedPreferences`. You can use `EncryptionManager` with zero configuration and get this secure encryption automatically.
 
-### Encrypting and Decrypting Raw Data via KeyStore
+For advanced use cases, `EncryptionManager` also allows custom configurations via the `EncryptionConfig` class:
 
 ```kotlin
+data class EncryptionConfig(
+    val keyAlgorithm: String = KeyProperties.KEY_ALGORITHM_AES,
+    val blockMode: BlockMode = BlockMode.GCM,
+    val encryptionPadding: String = KeyProperties.ENCRYPTION_PADDING_NONE,
+    val keySize: KeySize = KeySize.BITS_256,
+    val tagSize: TagSize = TagSize.BITS_128
+)
+```
+
+When needed, you can customize:
+* **Block Modes:** GCM (default), CBC
+* **Key Sizes:** 128, 192, 256 bits
+* **Padding (for CBC):** PKCS7
+* **Tag Sizes (for GCM):** 96, 104, 112, 120, 128 bits
+
+**Important Notes:**
+1. By default, `EncryptionManager` uses secure settings without requiring any configuration
+2. Custom configurations are available as an option when using `EncryptionManager` directly for raw data or file encryption
+3. When using custom configurations:
+   - `CBC` mode requires `PKCS7` padding
+   - `GCM` mode requires no padding
+4. `PersistManager` always uses the default configuration to maintain compatibility with `EncryptedSharedPreferences`
+
+### Basic Usage: Encrypting and Decrypting Raw Data
+
+```kotlin
+// Initialize with default secure configuration
 val encryptionManager = EncryptionManager(context, "your_key_alias")
 
 // Encrypt data
@@ -525,92 +555,80 @@ val encryptedValue = encryptionManager.encryptValue("valueToEncrypt")
 
 // Decrypt a Base64 encoded string and return the original value
 val decryptedValue: String = encryptionManager.decryptValue(encryptedValue, "defaultValue")
-
 ```
 
-### Encrypting and Decrypting Raw Data with `SecretKey` via an Externa Key
-One important feature is the ability generate an external key, which you can then pass to the library.
-
-By doing so, you can safe-keep that key on a server to be able to decrypt data when needed in the future.
+### Advanced Usage: Custom Encryption Configuration
+When needed, you can specify custom encryption parameters:
 
 ```kotlin
-// Generate an external key
+// Create custom configuration
+val customConfig = EncryptionConfig(
+    blockMode = BlockMode.CBC,
+    encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+    keySize = KeySize.BITS_128
+)
+
+// Initialize with custom config
+val encryptionManager = EncryptionManager(context, "myKeyAlias", customConfig)
+
+// All encryption operations will now use the custom configuration
+val encryptedData = encryptionManager.encryptData("sensitive data")
+val decryptedData = encryptionManager.decryptData(encryptedData)
+```
+
+### Using External Keys
+EncryptionManager supports external key management:
+
+```kotlin
+// Generate an external key (uses default secure configuration)
 val externalKey = EncryptionManager.generateExternalKey()
 
 // Create an EncryptionManager instance with the external key
-val encryptionManager = EncryptionManager(externalKey)
+val encryptionManager = EncryptionManager(context, externalKey)
+
+// Or use external key for specific operations while maintaining a default instance
+val defaultManager = EncryptionManager(context, "myKeyAlias")
+val encryptedValue = EncryptionManager.encryptValue("valueToEncrypt", secretKey = externalKey)
 ```
 
-Also you can supply that key at runtime  only for a specific entryption/decryption in Static context, leaving the keystore key for everything else
+### Storing and Retrieving External Keys
+The library provides methods to safely convert SecretKeys to/from strings for storage or transmission:
 
 ```kotlin
-// Create an EncryptionManager instance
-val encryptionManager = EncryptionManager(context, "myKeyAlias")
-
-// Generate an external key
-val externalKey = EncryptionManager.generateExternalKey()
-
-// we will now use that key only for the specified encryptions/decryptions
-
-// Encrypt a value and encode it to a Base64 string with custom key
-val encryptedValue1 = EncryptionManager.encryptValue("valueToEncrypt", secretKey = externalKey)
-// Encrypt a value and encode it to a Base64 string with default key
-val encryptedValue2 = encryptionManager.encryptValue("valueToEncrypt")
-
-// Decrypt a Base64 encoded string and return the original value with custom key
-val decryptedValue1 = EncryptionManager.decryptValue(encryptedValue, "defaultValue", secretKey = externalKey)
-// Decrypt a Base64 encoded string and return the original value with default key
-val decryptedValue2 = encryptionManager.decryptValue(encryptedValue, "defaultValue")
-```
-
-### Storing the externalKey (SecretKey) to some other medium
-If you have generated a key and want to securely transmit it to some API or retrieve it, then this library provides two convenience static methods for `encoding` and `decoding` that key to a string so you can easily transfer it.
-
-##### Exporting custom key to save it to some server
-```kotlin
-// generate a key
+// Exporting key
 val originalKey = EncryptionManager.generateExternalKey()
-
-// encrypt your data with that external key
-val encryptedData = EncryptionManager.encryptData("Hello, Secure World!", originalKey)
-
-// create a string that contains the encoded key (then send it to some server)
 val encodedKey: String = EncryptionManager.encodeSecretKey(originalKey)
 
-// make network call and save the encoded key string to some server
-```
-
-##### Retrieving the custom key from the server to use it in the app
-```kotlin
-val encodedKey = ... // fetch the string with encoded key from a remote server
-
-// construct a SecretKey from that encodedKey retrieved from the server
+// Importing key
 val decodedKey: SecretKey = EncryptionManager.decodeSecretKey(encodedKey)
-
-// as you can see, you can decode the encrypted data using the key that was reconstructed from the encoded string
-val decryptedText = EncryptionManager.decryptData(encryptedData, decodedKey)
 ```
 
-### FILES Encryption/Decription ##
-
-Additionally, `EncryptionManager` offers **`encryptFile`** and **`decryptFile`** functions, enabling you to securely encrypt data and store it in a file, as well as read and decrypt the data from the file when needed.
-
-These functions provide a seamless way to handle file-level encryption and decryption, ensuring that sensitive data remains secure during both storage and retrieval.
+### File Encryption and Decryption
+EncryptionManager provides straightforward file encryption:
 
 ```kotlin
-// Create an EncryptionManager instance
 val encryptionManager = EncryptionManager(context, "your_key_alias")
 
-// Specify the input file and the name for the encrypted file
-val testFile = File(context.filesDir, "plain.txt")
-val encryptedFileName = "encrypted.dat"
+// Encrypt a file
+val inputFile = File(context.filesDir, "plain.txt")
+encryptionManager.encryptFile(inputFile, "encrypted.dat")
 
-// Encrypt the file
-encryptionManager.encryptFile(testFile, encryptedFileName)
-
-// Decrypt the file
-val decryptedContent: ByteArray = encryptionManager.decryptFile(encryptedFileName)
+// Decrypt a file
+val decryptedContent = encryptionManager.decryptFile("encrypted.dat")
 val decryptedText = String(decryptedContent)
+```
+
+The file operations can also use custom configurations when needed:
+```kotlin
+// With custom configuration
+val customConfig = EncryptionConfig(
+    blockMode = BlockMode.CBC,
+    encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7
+)
+val encryptionManager = EncryptionManager(context, "your_key_alias", customConfig)
+
+// File operations will use the custom configuration
+encryptionManager.encryptFile(inputFile, "encrypted.dat")
 ```
 
 ---
