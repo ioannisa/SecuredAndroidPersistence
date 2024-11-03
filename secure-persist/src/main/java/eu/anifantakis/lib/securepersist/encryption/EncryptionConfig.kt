@@ -33,27 +33,36 @@ enum class BlockMode(val mode: String, val ivSize: Int) {
 
 /**
  * Configuration class for encryption settings.
- * Provides default values matching the original implementation and allows custom configurations.
+ * Provides default values matching the Android's recommended security practices:
+ * - AES encryption algorithm
+ * - GCM block mode for authenticated encryption
+ * - 256-bit key size
+ * - Hardware-backed key storage when available
+ *
+ * @property keyAlgorithm The encryption algorithm to use. Defaults to AES.
+ * @property blockMode The block cipher mode of operation. Defaults to GCM which provides authenticated encryption.
+ *                     See [BlockMode] for available options.
+ * @property encryptionPadding The padding scheme to use. For GCM mode, must be NONE as GCM handles padding internally.
+ *                             For CBC mode, typically PKCS7 is used.
+ * @property keySize The size of the encryption key in bits. See [KeySize] for available options.
+ *                   Larger keys provide more security but may impact performance.
+ * @property tagSize The size of the authentication tag when using GCM mode. See [TagSize] for available options.
+ *                   Only applicable for GCM mode, ignored for other modes.
  */
 data class EncryptionConfig(
     val keyAlgorithm: String = KeyProperties.KEY_ALGORITHM_AES,
     val blockMode: BlockMode = BlockMode.GCM,
     val encryptionPadding: String = KeyProperties.ENCRYPTION_PADDING_NONE,
     val keySize: KeySize = KeySize.BITS_256,
-    val tagSize: TagSize = TagSize.BITS_128,
-    val useKeystore: Boolean = true,
-    val keystoreType: String = "AndroidKeyStore"
+    val tagSize: TagSize = TagSize.BITS_128
 ) {
     val transformation: String
         get() = "$keyAlgorithm/${blockMode.mode}/$encryptionPadding"
 
-    // IV size is determined by block mode
     val ivSize: Int
         get() = blockMode.ivSize
 
     init {
-        // Only need to validate that block mode matches padding
-        // Other validations are handled by enum restrictions
         require(!(blockMode == BlockMode.GCM && encryptionPadding != KeyProperties.ENCRYPTION_PADDING_NONE)) {
             "GCM mode requires no padding"
         }

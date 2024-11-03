@@ -8,7 +8,16 @@
       <SelectionState runConfigName="CustomTypeDelegationDataStoreTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="PersistedMutableStateTest">
+      <SelectionState runConfigName="EncryptionManagerTest">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="CustomTypeDelegationSharedPreferencesTest">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="testEncryptAndDecryptFileFromFileSystemCustomConfig()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="testEncryptAndDecryptFileFromFileSystem()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

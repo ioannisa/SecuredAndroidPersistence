@@ -22,6 +22,8 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+private const val keystoreType: String = "AndroidKeyStore"
+
 /**
  * [EncryptionManager] class handles encryption and decryption using the Android KeyStore system or an external key.
  *
@@ -203,17 +205,13 @@ class EncryptionManager : IEncryptionManager {
         this.context = context
         this.config = config
 
-        if (!config.useKeystore) {
-            throw IllegalArgumentException("This constructor requires useKeystore=true in config")
-        }
-
-        val keyStore = KeyStore.getInstance(config.keystoreType).apply { load(null) }
+        val keyStore = KeyStore.getInstance(keystoreType).apply { load(null) }
         val keyFromStore = keyStore.getKey(keyAlias, null) as? SecretKey
 
         this.secretKey = if (keyFromStore != null) {
             keyFromStore
         } else {
-            val keyGenerator = KeyGenerator.getInstance(config.keyAlgorithm, config.keystoreType)
+            val keyGenerator = KeyGenerator.getInstance(config.keyAlgorithm, keystoreType)
             val keyGenParameterSpec = KeyGenParameterSpec.Builder(
                 keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
@@ -283,7 +281,7 @@ class EncryptionManager : IEncryptionManager {
     }
 
     override fun getAttestationCertificateChain(alias: String): Array<Certificate> {
-        val keyStore = KeyStore.getInstance(config.keystoreType).apply { load(null) }
+        val keyStore = KeyStore.getInstance(keystoreType).apply { load(null) }
         val entry = keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
             ?: throw IllegalArgumentException("No key found under alias: $alias")
         return entry.certificateChain
