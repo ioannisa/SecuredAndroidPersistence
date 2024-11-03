@@ -1,6 +1,7 @@
 package eu.anifantakis.lib.securepersist.encryption
 
 import android.content.Context
+import android.security.keystore.KeyProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
@@ -46,8 +47,46 @@ class EncryptionManagerTest {
     }
 
     @Test
+    fun testKeyStoreEncryptionDecryptionCustomConfig() {
+        val keyAlias = "testKeyAliasCustomConfig"
+
+        val customConfig = EncryptionConfig(
+            keyAlgorithm = KeyProperties.KEY_ALGORITHM_AES,
+            blockMode = BlockMode.CBC,
+            encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+            keySize = KeySize.BITS_256
+        )
+
+        val encryptionManager = EncryptionManager(context, keyAlias, customConfig)
+
+        val originalText = "Hello, Secure World!"
+        val encryptedData = encryptionManager.encryptData(originalText)
+        val decryptedText = encryptionManager.decryptData(encryptedData)
+
+        assertEquals(originalText, decryptedText)
+    }
+
+    @Test
     fun testExternalKeyEncryptionDecryption() {
         val encryptionManager = EncryptionManager(context, EncryptionManager.generateExternalKey())
+
+        val originalText = "Hello, Secure World!"
+        val encryptedData = encryptionManager.encryptData(originalText)
+        val decryptedText = encryptionManager.decryptData(encryptedData)
+
+        assertEquals(originalText, decryptedText)
+    }
+
+    @Test
+    fun testExternalKeyEncryptionDecryptionCustomConfig() {
+        val customConfig = EncryptionConfig(
+            keyAlgorithm = KeyProperties.KEY_ALGORITHM_AES,
+            blockMode = BlockMode.CBC,
+            encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+            keySize = KeySize.BITS_256
+        )
+
+        val encryptionManager = EncryptionManager(context, EncryptionManager.generateExternalKey(), customConfig)
 
         val originalText = "Hello, Secure World!"
         val encryptedData = encryptionManager.encryptData(originalText)
@@ -91,12 +130,47 @@ class EncryptionManagerTest {
     }
 
     @Test
+    fun testStaticExternalKeyEncryptionDecryptionCustomConfig() {
+        val externalKey = EncryptionManager.generateExternalKey()
+        val customConfig = EncryptionConfig(
+            keyAlgorithm = KeyProperties.KEY_ALGORITHM_AES,
+            blockMode = BlockMode.CBC,
+            encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+            keySize = KeySize.BITS_256
+        )
+
+        val originalText = "Hello, Secure World!"
+        val encryptedData = EncryptionManager.encryptData(originalText, externalKey, customConfig)
+        val decryptedText = EncryptionManager.decryptData(encryptedData, externalKey, customConfig)
+
+        assertEquals(originalText, decryptedText)
+    }
+
+    @Test
     fun testStaticExternalKeyBase64EncodedEncryptionDecryption() {
         val externalKey = EncryptionManager.generateExternalKey()
 
         val originalValue = "Hello, Secure World!"
         val encryptedValue = EncryptionManager.encryptValue(originalValue, externalKey)
         val decryptedValue = EncryptionManager.decryptValue(encryptedValue, "", externalKey)
+
+        assertEquals(originalValue, decryptedValue)
+    }
+
+    @Test
+    fun testStaticExternalKeyBase64EncodedEncryptionDecryptionCustomConfig() {
+        val externalKey = EncryptionManager.generateExternalKey()
+        val customConfig = EncryptionConfig(
+            keyAlgorithm = KeyProperties.KEY_ALGORITHM_AES,
+            blockMode = BlockMode.CBC,
+            encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+            keySize = KeySize.BITS_256
+        )
+
+
+        val originalValue = "Hello, Secure World!"
+        val encryptedValue = EncryptionManager.encryptValue(originalValue, externalKey, customConfig)
+        val decryptedValue = EncryptionManager.decryptValue(encryptedValue, "", externalKey, customConfig)
 
         assertEquals(originalValue, decryptedValue)
     }
@@ -134,6 +208,45 @@ class EncryptionManagerTest {
         val testFileContent = "Hello, Secure File!"
 
         val encryptionManager = EncryptionManager(context, "keyAlias")
+
+        // Create test file with specific content
+        val testFile = File(context.filesDir, testFileName)
+        FileOutputStream(testFile).use { it.write(testFileContent.toByteArray()) }
+
+        // Encrypt the file from file system
+        encryptionManager.encryptFile(testFile, encryptedFileName)
+
+        // Decrypt the file
+        val decryptedContent: ByteArray = encryptionManager.decryptFile(encryptedFileName)
+        val decryptedText = String(decryptedContent)
+
+        // Compare the original and decrypted content
+        assertEquals(
+            "Decrypted content does not match the original content",
+            testFileContent,
+            decryptedText
+        )
+
+        // Clean up
+        testFile.delete()
+        val encryptedFile = File(context.filesDir, encryptedFileName)
+        if (encryptedFile.exists()) encryptedFile.delete()
+    }
+
+    @Test
+    fun testEncryptAndDecryptFileFromFileSystemCustomConfig() {
+        val testFileName = "test.txt"
+        val encryptedFileName = "encrypted_test_file"
+        val testFileContent = "Hello, Secure File!"
+
+        val customConfig = EncryptionConfig(
+            keyAlgorithm = KeyProperties.KEY_ALGORITHM_AES,
+            blockMode = BlockMode.CBC,
+            encryptionPadding = KeyProperties.ENCRYPTION_PADDING_PKCS7,
+            keySize = KeySize.BITS_256
+        )
+
+        val encryptionManager = EncryptionManager(context, "keyAlias2", customConfig)
 
         // Create test file with specific content
         val testFile = File(context.filesDir, testFileName)

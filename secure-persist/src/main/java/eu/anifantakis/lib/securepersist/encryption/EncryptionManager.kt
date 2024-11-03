@@ -13,46 +13,39 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
+import java.security.SecureRandom
 import java.security.cert.Certificate
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
  * [EncryptionManager] class handles encryption and decryption using the Android KeyStore system or an external key.
  *
  * It provides methods to encrypt and decrypt data, values, and files, either using a key stored in the Android KeyStore
- * or an externally provided [SecretKey]. It supports AES encryption in GCM mode with no padding.
+ * or an externally provided [SecretKey]. It supports configurable encryption parameters.
  */
 class EncryptionManager : IEncryptionManager {
 
     private val context: Context
     private val secretKey: SecretKey
+    private val config: EncryptionConfig
 
     companion object {
-        private const val KEYSTORE_TYPE = "AndroidKeyStore"
-
-        private const val KEY_ALGORITHM: String = KeyProperties.KEY_ALGORITHM_AES
-        private const val BLOCK_MODE: String = KeyProperties.BLOCK_MODE_GCM
-        private const val ENCRYPTION_PADDING: String = KeyProperties.ENCRYPTION_PADDING_NONE
-
-        private const val KEY_SIZE: Int = 256
-        private const val CIPHER_TRANSFORMATION = "$KEY_ALGORITHM/$BLOCK_MODE/$ENCRYPTION_PADDING"
-        private const val IV_SIZE = 12 // IV size for GCM is 12 bytes
-        private const val TAG_SIZE = 128 // Tag size for GCM is 128 bits
-
         private val gson = Gson()
 
         /**
-         * Generates a new external [SecretKey].
+         * Generates a new external [SecretKey] with specified configuration.
          *
+         * @param config The encryption configuration to use. Uses [EncryptionConfig.DEFAULT] if not specified.
          * @return The generated secret key.
          */
-        fun generateExternalKey(): SecretKey {
-            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM)
-            keyGenerator.init(KEY_SIZE)
+        fun generateExternalKey(config: EncryptionConfig = EncryptionConfig.DEFAULT): SecretKey {
+            val keyGenerator = KeyGenerator.getInstance(config.keyAlgorithm)
+            keyGenerator.init(config.keySize.bits)
             return keyGenerator.generateKey()
         }
 
@@ -61,11 +54,12 @@ class EncryptionManager : IEncryptionManager {
          *
          * @param value The value to encrypt.
          * @param secretKey The secret key to use for encryption.
+         * @param config The encryption configuration to use.
          * @return The encrypted value as a Base64 encoded string.
          */
-        fun <T> encryptValue(value: T, secretKey: SecretKey): String {
+        fun <T> encryptValue(value: T, secretKey: SecretKey, config: EncryptionConfig = EncryptionConfig.DEFAULT): String {
             val stringValue = gson.toJson(value)
-            val encryptedData = encryptData(stringValue, secretKey)
+            val encryptedData = encryptData(stringValue, secretKey, config)
             return Base64.encodeToString(encryptedData, Base64.NO_WRAP)
         }
 
@@ -75,12 +69,18 @@ class EncryptionManager : IEncryptionManager {
          * @param encryptedValue The encrypted value as a Base64 encoded string.
          * @param defaultValue An instance of the default value (used for type inference).
          * @param secretKey The secret key to use for decryption.
+         * @param config The encryption configuration to use.
          * @return The decrypted value.
          */
-        fun <T> decryptValue(encryptedValue: String, defaultValue: T, secretKey: SecretKey): T {
+        fun <T> decryptValue(
+            encryptedValue: String,
+            defaultValue: T,
+            secretKey: SecretKey,
+            config: EncryptionConfig = EncryptionConfig.DEFAULT
+        ): T {
             return try {
                 val encryptedData = Base64.decode(encryptedValue, Base64.NO_WRAP)
-                val jsonString = decryptData(encryptedData, secretKey)
+                val jsonString = decryptData(encryptedData, secretKey, config)
                 gson.fromJson(jsonString, defaultValue!!::class.java) as T
             } catch (e: Exception) {
                 Log.e("EncryptionManager", "Decryption failed", e)
@@ -93,16 +93,30 @@ class EncryptionManager : IEncryptionManager {
          *
          * @param data The plaintext data to encrypt.
          * @param secretKey The secret key to use for encryption.
+         * @param config The encryption configuration to use.
          * @return The encrypted data as a byte array.
          */
-        fun encryptData(data: String, secretKey: SecretKey): ByteArray {
+        fun encryptData(
+            data: String,
+            secretKey: SecretKey,
+            config: EncryptionConfig = EncryptionConfig.DEFAULT
+        ): ByteArray {
             return try {
-                val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                val cipher = Cipher.getInstance(config.transformation)
+
+                when (config.blockMode) {
+                    BlockMode.GCM -> {
+                        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                    }
+                    BlockMode.CBC -> {
+                        val iv = ByteArray(config.ivSize)
+                        SecureRandom().nextBytes(iv)
+                        cipher.init(Cipher.ENCRYPT_MODE, secretKey, IvParameterSpec(iv))
+                    }
+                }
+
                 val iv = cipher.iv
                 val encryptedData = cipher.doFinal(data.toByteArray(StandardCharsets.UTF_8))
-
-                // Combine IV and encrypted data
                 combineIvAndEncryptedData(iv, encryptedData)
             } catch (e: Exception) {
                 Log.e("EncryptionManager", "Encryption failed", e)
@@ -115,39 +129,47 @@ class EncryptionManager : IEncryptionManager {
          *
          * @param encryptedData The encrypted data as a byte array.
          * @param secretKey The secret key to use for decryption.
+         * @param config The encryption configuration to use.
          * @return The decrypted plaintext data as a string.
          */
-        fun decryptData(encryptedData: ByteArray, secretKey: SecretKey): String {
+        fun decryptData(
+            encryptedData: ByteArray,
+            secretKey: SecretKey,
+            config: EncryptionConfig = EncryptionConfig.DEFAULT
+        ): String {
             return try {
-                if (encryptedData.size < IV_SIZE) {
+                val ivSize = config.ivSize
+
+                if (encryptedData.size < ivSize) {
                     throw IllegalArgumentException("Encrypted data is too short to contain a valid IV")
                 }
 
-                val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                val cipher = Cipher.getInstance(config.transformation)
 
-                val iv = ByteArray(IV_SIZE)
+                val iv = ByteArray(ivSize)
                 System.arraycopy(encryptedData, 0, iv, 0, iv.size)
 
                 val encryptedBytes = ByteArray(encryptedData.size - iv.size)
                 System.arraycopy(encryptedData, iv.size, encryptedBytes, 0, encryptedBytes.size)
 
-                val ivSpec = GCMParameterSpec(TAG_SIZE, iv)
-                cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
+                when (config.blockMode) {
+                    BlockMode.GCM -> {
+                        val ivSpec = GCMParameterSpec(config.tagSize.bits, iv)
+                        cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
+                    }
+                    BlockMode.CBC -> {
+                        val ivSpec = IvParameterSpec(iv)
+                        cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec)
+                    }
+                }
+
                 String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8)
             } catch (e: Exception) {
-                // Log the exception for better debugging and tracing
                 Log.e("EncryptionManager", "Decryption failed", e)
                 throw e
             }
         }
 
-        /**
-         * Combines the IV and encrypted data into a single byte array.
-         *
-         * @param iv The initialization vector.
-         * @param encryptedData The encrypted data.
-         * @return The combined IV and encrypted data.
-         */
         private fun combineIvAndEncryptedData(iv: ByteArray, encryptedData: ByteArray): ByteArray {
             val combined = ByteArray(iv.size + encryptedData.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
@@ -155,124 +177,91 @@ class EncryptionManager : IEncryptionManager {
             return combined
         }
 
-        /**
-         * Encodes a [SecretKey] to a Base64 string for storage or transmission.
-         *
-         * @param secretKey The [SecretKey] to encode.
-         * @return The Base64 encoded string representation of the [SecretKey].
-         */
         fun encodeSecretKey(secretKey: SecretKey): String {
             val encodedKey = secretKey.encoded
             return Base64.encodeToString(encodedKey, Base64.NO_WRAP)
         }
 
-        /**
-         * Decodes an encoded [SecretKey] that was stored as a Base64 string from the [encodeSecretKey] function back to a [SecretKey].
-         *
-         * @param encodedKey The Base64 encoded string representation of the [SecretKey].
-         * @return The decoded [SecretKey].
-         */
-        fun decodeSecretKey(encodedKey: String): SecretKey {
+        fun decodeSecretKey(encodedKey: String, config: EncryptionConfig = EncryptionConfig.DEFAULT): SecretKey {
             val decodedKey = Base64.decode(encodedKey, Base64.NO_WRAP)
-            return SecretKeySpec(decodedKey, 0, decodedKey.size, KEY_ALGORITHM)
+            return SecretKeySpec(decodedKey, 0, decodedKey.size, config.keyAlgorithm)
         }
     }
 
     /**
-     * Constructor for [EncryptionManager] using the Android KeyStore.
+     * Constructor for [EncryptionManager] using the Android KeyStore with custom configuration.
      *
      * @param context The application context.
      * @param keyAlias The alias for the encryption key in the KeyStore.
+     * @param config The encryption configuration to use.
      */
-    constructor(context: Context, keyAlias: String) {
+    constructor(
+        context: Context,
+        keyAlias: String,
+        config: EncryptionConfig = EncryptionConfig.DEFAULT
+    ) {
         this.context = context
+        this.config = config
 
-        // Load or generate the secret key from the KeyStore using keyAlias
-        val keyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply { load(null) }
+        if (!config.useKeystore) {
+            throw IllegalArgumentException("This constructor requires useKeystore=true in config")
+        }
+
+        val keyStore = KeyStore.getInstance(config.keystoreType).apply { load(null) }
         val keyFromStore = keyStore.getKey(keyAlias, null) as? SecretKey
-        if (keyFromStore != null) {
-            this.secretKey = keyFromStore
+
+        this.secretKey = if (keyFromStore != null) {
+            keyFromStore
         } else {
-            // Key not found, generate a new one
-            val keyGenerator = KeyGenerator.getInstance(KEY_ALGORITHM, KEYSTORE_TYPE)
+            val keyGenerator = KeyGenerator.getInstance(config.keyAlgorithm, config.keystoreType)
             val keyGenParameterSpec = KeyGenParameterSpec.Builder(
                 keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             )
-                .setBlockModes(BLOCK_MODE)
-                .setEncryptionPaddings(ENCRYPTION_PADDING)
-                .setKeySize(KEY_SIZE)
+                .setBlockModes(config.blockMode.mode)
+                .setEncryptionPaddings(config.encryptionPadding)
+                .setKeySize(config.keySize.bits)
+                .setRandomizedEncryptionRequired(false)  // Allow caller-provided IV
                 .build()
             keyGenerator.init(keyGenParameterSpec)
             keyGenerator.generateKey()
-            // Now retrieve the generated key
-            val generatedKey = keyStore.getKey(keyAlias, null) as SecretKey
-            this.secretKey = generatedKey
+            keyStore.getKey(keyAlias, null) as SecretKey
         }
     }
 
     /**
-     * Constructor for [EncryptionManager] using an external [SecretKey].
+     * Constructor for [EncryptionManager] using an external key with custom configuration.
      *
      * @param context The application context.
      * @param externalKey The external secret key for encryption and decryption.
+     * @param config The encryption configuration to use.
      */
-    constructor(context: Context, externalKey: SecretKey) {
+    constructor(
+        context: Context,
+        externalKey: SecretKey,
+        config: EncryptionConfig = EncryptionConfig.DEFAULT
+    ) {
         this.context = context
         this.secretKey = externalKey
+        this.config = config
     }
 
-    /**
-     * Encrypts the given data using the secret key.
-     *
-     * @param data The plaintext data to encrypt.
-     * @return The encrypted data as a byte array.
-     */
     override fun encryptData(data: String): ByteArray {
-        return Companion.encryptData(data, secretKey)
+        return Companion.encryptData(data, secretKey, config)
     }
 
-    /**
-     * Decrypts the given encrypted data using the secret key.
-     *
-     * @param encryptedData The encrypted data as a byte array.
-     * @return The decrypted plaintext data as a string.
-     */
     override fun decryptData(encryptedData: ByteArray): String {
-        return Companion.decryptData(encryptedData, secretKey)
+        return Companion.decryptData(encryptedData, secretKey, config)
     }
 
-    /**
-     * Encrypts a value and encodes it to a Base64 string.
-     *
-     * @param value The value to encrypt.
-     * @return The encrypted value as a Base64 encoded string.
-     */
     override fun <T> encryptValue(value: T): String {
-        return Companion.encryptValue(value, secretKey)
+        return Companion.encryptValue(value, secretKey, config)
     }
 
-    /**
-     * Decrypts a Base64 encoded string and returns the original value.
-     *
-     * @param encryptedValue The encrypted value as a Base64 encoded string.
-     * @param defaultValue An instance of the default value (used for type inference).
-     * @return The decrypted value.
-     */
     override fun <T> decryptValue(encryptedValue: String, defaultValue: T): T {
-        return Companion.decryptValue(encryptedValue, defaultValue, secretKey)
+        return Companion.decryptValue(encryptedValue, defaultValue, secretKey, config)
     }
 
-    /**
-     * Encrypts data from an [InputStream] and writes the encrypted data to a file in the app's private storage.
-     *
-     * This method reads all bytes from the provided [inputStream], encodes the data to Base64,
-     * encrypts it using the encryption key, and writes the encrypted data to a file named [encryptedFileName]
-     * in the app's private storage directory.
-     *
-     * @param inputStream The [InputStream] containing the data to encrypt.
-     * @param encryptedFileName The name of the encrypted file to be created in the app's private storage.
-     */
     private fun encryptInputStream(inputStream: InputStream, encryptedFileName: String) {
         val fileContent: ByteArray = inputStream.readBytes()
         val base64Content = Base64.encodeToString(fileContent, Base64.NO_WRAP)
@@ -281,30 +270,11 @@ class EncryptionManager : IEncryptionManager {
         FileOutputStream(encryptedFile).use { it.write(encryptedData) }
     }
 
-    /**
-     * Encrypts a file from the file system and writes the encrypted data to a file in the app's private storage.
-     *
-     * This method reads the contents of [inputFile], encodes the data to Base64,
-     * encrypts it using the encryption key, and writes the encrypted data to a file named [encryptedFileName]
-     * in the app's private storage directory.
-     *
-     * @param inputFile The [File] object representing the file to encrypt.
-     * @param encryptedFileName The name of the encrypted file to be created in the app's private storage.
-     */
     override fun encryptFile(inputFile: File, encryptedFileName: String) {
         val inputStream: InputStream = FileInputStream(inputFile)
         encryptInputStream(inputStream, encryptedFileName)
     }
 
-    /**
-     * Decrypts an encrypted file from the app's private storage and returns the decrypted content as a [ByteArray].
-     *
-     * This method reads the encrypted file named [encryptedFileName], decrypts the data using the encryption key,
-     * decodes the decrypted Base64 string back into bytes, and returns the original file content.
-     *
-     * @param encryptedFileName The name of the encrypted file stored in the app's private storage.
-     * @return The decrypted file content as a [ByteArray].
-     */
     override fun decryptFile(encryptedFileName: String): ByteArray {
         val encryptedFile = File(context.filesDir, encryptedFileName)
         val encryptedData: ByteArray = encryptedFile.readBytes()
@@ -312,25 +282,13 @@ class EncryptionManager : IEncryptionManager {
         return Base64.decode(decryptedBase64String, Base64.NO_WRAP)
     }
 
-    /**
-     * Retrieves the attestation certificate chain for the key.
-     *
-     * @param alias The alias of the key to get the attestation for.
-     * @return The attestation certificate chain.
-     * @throws IllegalArgumentException If no key is found under the specified alias.
-     */
     override fun getAttestationCertificateChain(alias: String): Array<Certificate> {
-        val keyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply { load(null) }
+        val keyStore = KeyStore.getInstance(config.keystoreType).apply { load(null) }
         val entry = keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
             ?: throw IllegalArgumentException("No key found under alias: $alias")
         return entry.certificateChain
     }
 
-    /**
-     * Reads the [InputStream] and returns its content as a [ByteArray].
-     *
-     * @return The [ByteArray] read from the [InputStream].
-     */
     private fun InputStream.readBytes(): ByteArray {
         val buffer = ByteArrayOutputStream()
         val data = ByteArray(1024)
