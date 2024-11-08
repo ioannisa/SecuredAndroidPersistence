@@ -435,17 +435,14 @@ class LibCounterViewModel(
         private set
 
     // Sets a custom key and uses DataStorePreferences with encryption
-    var count2 by persistManager.mutableStateOf(
+    var count2 by persistManager.dataStorePrefs.mutableStateOf(
         defaultValue = 2000, 
-        key = "counter2Key",
-        storage = PersistManager.Storage.DATA_STORE_ENCRYPTED
+        key = "counter2Key"
     )
         private set
 
     // Uses the property name as the key and sets storage to Unencrypted DataStorePreferences
-    var count3 by persistManager.mutableStateOf(3000,
-            storage = PersistManager.Storage.DATA_STORE
-    )
+    var count3 by persistManager.dataStorePrefs.mutableStateOf(3000, encrypted = false))
         private set
 
     fun increment() {
