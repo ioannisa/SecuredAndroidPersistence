@@ -92,8 +92,8 @@ implementation(project(":secure-persist-compose"))
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.4.0")
-implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.4.0")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.5.1")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.5.1")
 ```
 
 
