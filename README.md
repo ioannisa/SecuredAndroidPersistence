@@ -431,7 +431,7 @@ class LibCounterViewModel(
     // If key is unspecified, property name becomes the key
 
     // Defaults to EncryptedSharedPreferences and uses the property name as the key
-    var count1 by persistManager.mutableStateOf(1000)
+    var count1 by persistManager.sharedPrefs.mutableStateOf(1000)
         private set
 
     // Sets a custom key and uses DataStorePreferences with encryption
