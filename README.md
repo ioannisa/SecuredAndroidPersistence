@@ -16,6 +16,8 @@ With the latest addition of **State Persistence**, SecurePersist now also offers
 
 This library allows out of the box with zero-configuration encrypting and decrypting preferences using `SharedPreferences` and `DataStore`, supports serialization of complex data types, and provides robust raw data and file encryption capabilities.
 
+> One big plus is due to property delegation support, with this library, you can handle encrypted data just like regular objects you read and write, making data security effortless!
+
 So this library makes it easy for developers to
 
 1. implement comprehensive encrypted storage solutions
