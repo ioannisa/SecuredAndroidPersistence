@@ -1,9 +1,11 @@
 package eu.anifantakis.lib.securepersist.compose
 
 import android.content.Context
+import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import eu.anifantakis.lib.securepersist.PersistManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
@@ -34,6 +36,9 @@ class PersistedMutableStateTest {
             delete("testEncryptedPersistence")
             delete("dataStoreValueKey")
             delete("observedValue")
+            delete("personSP")
+            delete("personEDS")
+            delete("personUDS")
         }
     }
 
@@ -168,5 +173,51 @@ class PersistedMutableStateTest {
         observedValue = 10
 
         Assert.assertEquals(10, observedValue)
+    }
+
+    data class Person(
+        val name: String,
+        val age: Int,
+        val ringTone: Uri
+    )
+
+    @Test
+    fun testSharedPrefDataClass() {
+        var personSP by persistManager.sharedPrefs.mutableStateOf(Person("Alice", 30, Uri.EMPTY))
+
+        personSP = Person("Bob", 25, Uri.parse("https://anifantakis.eu"))
+
+        val personSPNew by persistManager.sharedPrefs.mutableStateOf(Person("", 0, Uri.EMPTY), key = "personSP")
+
+        Assert.assertEquals(Person("Bob", 25, Uri.parse("https://anifantakis.eu")), personSPNew)
+
+    }
+
+    @Test
+    fun testEncryptedDataStoreDataClass() = runBlocking {
+        var personEDS by persistManager.dataStorePrefs.mutableStateOf(Person("Alice", 30, Uri.EMPTY))
+        delay(200L)
+
+        personEDS = Person("Bob", 25, Uri.parse("https://anifantakis.eu"))
+        delay(200L)
+
+        val personEDSNew by persistManager.dataStorePrefs.mutableStateOf(Person("", 0, Uri.EMPTY), key = "personEDS")
+
+        Assert.assertEquals(Person("Bob", 25, Uri.parse("https://anifantakis.eu")), personEDSNew)
+
+    }
+
+    @Test
+    fun testUnencryptedDataStoreDataClass() = runBlocking {
+        var personUDS by persistManager.dataStorePrefs.mutableStateOf(Person("Alice", 30, Uri.EMPTY), encrypted = false)
+        delay(200L)
+
+        personUDS = Person("Bob", 25, Uri.parse("https://anifantakis.eu"))
+        delay(200L)
+
+        val personUDSNew by persistManager.dataStorePrefs.mutableStateOf(Person("", 0, Uri.EMPTY), key = "personUDS", encrypted = false)
+
+        Assert.assertEquals(Person("Bob", 25, Uri.parse("https://anifantakis.eu")), personUDSNew)
+
     }
 }

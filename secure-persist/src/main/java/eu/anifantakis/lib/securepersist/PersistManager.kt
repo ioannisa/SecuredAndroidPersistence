@@ -1,11 +1,11 @@
 package eu.anifantakis.lib.securepersist
 
 import android.content.Context
-import com.google.gson.Gson
 import eu.anifantakis.lib.securepersist.encryption.EncryptionManager
 import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import eu.anifantakis.lib.securepersist.internal.DataStoreManager
 import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
+import eu.anifantakis.lib.securepersist.internal.createGson
 import kotlin.reflect.KProperty
 
 interface SecurePersistSolution
@@ -45,8 +45,8 @@ interface EncryptedPreference <T> {
  */
 class PersistManager(context: Context, keyAlias: String = "keyAlias") {
 
-    private val gson = Gson()
-    private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias)
+    private val gson = createGson()
+    private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias, gson = gson)
     val sharedPrefs = SharedPreferencesManager(context, gson)
     val dataStorePrefs = DataStoreManager(context, encryptionManager, gson)
 

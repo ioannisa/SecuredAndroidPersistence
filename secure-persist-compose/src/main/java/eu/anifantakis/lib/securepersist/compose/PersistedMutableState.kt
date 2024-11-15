@@ -13,25 +13,40 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 /**
- * A property delegate that manages a persisted mutable state.
+ * A property delegate that manages a persisted mutable state in Jetpack Compose applications.
  *
- * This class integrates Compose's `MutableState` with persistent storage mechanisms
- * provided by [PersistManager], allowing state to be automatically saved and restored
- * across app sessions. It enforces the use of property delegation via the `by` keyword,
- * ensuring that the persisted state is correctly associated with its property.
+ * This class provides a bridge between Compose's [MutableState] and persistent storage mechanisms,
+ * enabling automatic persistence of state changes. It supports multiple storage backends including
+ * SharedPreferences and DataStore, with optional encryption.
  *
- * @param T The type of the state value.
- * @property defaultValue The default value of the state if no persisted value exists.
- * @property key The key used for persisting the state. If `null`, the property's name is used.
- * @property storage The storage mechanism to use for persisting the state. Defaults to `SHARED_PREFERENCES`.
- * @property snapshotPolicy The policy to determine state equality. Defaults to structural equality.
+ * The state is lazily initialized when first accessed and automatically persists changes when the
+ * state value is modified. Thread safety is ensured during initialization and state updates.
  *
- * @constructor Creates a new instance of [PersistedMutableState].
+ * Example usage:
+ * ```
+ * class MyViewModel {
+ *     private val persistManager = PersistManager(context)
  *
- * @throws IllegalArgumentException If both [key] and the property's name are `null`.
+ *     // Using DataStore with encryption
+ *     private var counter by persistManager.dataStore.mutableStateOf(0)
  *
- * @see PersistManager
+ *     // Using SharedPreferences
+ *     private var userName by persistManager.sharedPrefs.mutableStateOf("Guest")
+ * }
+ * ```
+ *
+ * @param T The type of the state value. Must be compatible with the chosen storage mechanism.
+ * @property defaultValue The default value used when no persisted value exists.
+ * @property key The storage key. If null, the property name will be used as the key.
+ * @property storage The storage backend to use ([Storage.SHARED_PREFERENCES], [Storage.DATA_STORE], or [Storage.DATA_STORE_ENCRYPTED]).
+ * @property snapshotPolicy Policy determining when state updates should trigger recomposition.
+ * @property securePersistSolution The storage implementation to use for persistence.
+ *
+ * @throws IllegalArgumentException If the storage key cannot be determined.
+ * @throws ClassCastException If the persisted value cannot be cast to type T.
+ *
  * @see MutableState
+ * @see SecurePersistSolution
  */
 class PersistedMutableState<T>(
     private val defaultValue: T,
@@ -45,6 +60,7 @@ class PersistedMutableState<T>(
      * Holds the property name if [key] is not provided.
      */
     private var propertyName: String? = null
+    private var isInitialized = false
 
     /**
      * Computes the preference key using [key] or the property's name.
@@ -64,7 +80,18 @@ class PersistedMutableState<T>(
      * The current value of the state.
      */
     override var value: T
-        get() = _state.value
+        get() {
+            if (!isInitialized && propertyName != null) {
+                synchronized(this) {
+                    if (!isInitialized) {
+                        // Initialize with persisted value outside of the snapshot
+                        _state = mutableStateOf(getPersistedValue(), policy = snapshotPolicy)
+                        isInitialized = true
+                    }
+                }
+            }
+            return _state.value
+        }
         set(newValue) {
             if (!snapshotPolicy.equivalent(_state.value, newValue)) {
                 _state.value = newValue
@@ -85,11 +112,6 @@ class PersistedMutableState<T>(
     override fun getValue(thisRef: Any?, property: KProperty<*>): T {
         if (propertyName == null) {
             propertyName = property.name
-            // Now we can get the persisted value using the correct key
-            val persistedValue = getPersistedValue()
-            if (!snapshotPolicy.equivalent(_state.value, persistedValue)) {
-                _state.value = persistedValue
-            }
         }
         return value
     }
@@ -107,11 +129,6 @@ class PersistedMutableState<T>(
     override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
         if (propertyName == null) {
             propertyName = property.name
-            // Now we can get the persisted value using the correct key
-            val persistedValue = getPersistedValue()
-            if (!snapshotPolicy.equivalent(_state.value, persistedValue)) {
-                _state.value = persistedValue
-            }
         }
         this.value = value
     }
