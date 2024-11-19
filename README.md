@@ -447,6 +447,36 @@ class LibCounterViewModel(
 * **Behavior:** Uses the property name (`count3`) as the key and sets `Storage` to `DATA_STORE` to specify DataStore without encryption. This is ideal for scenarios where data security is not a primary concern, and you want to leverage DataStore's advantages like type safety and better asynchronous handling.
 
 
+### Complex Type Support
+The library provides comprehensive support for complex data types through automatic serialization/deserialization:
+
+These are `data class` instances.  While `Gson` can serialize data classes that contain only base types (primitives and Strings), this library automatically handles additional types without having to provide a custom adapter class to handle the following types:
+
+#### Coomplex Types supported ina `data class`
+
+1. **Base Type Support**
+    - Primitive Types:
+     - `Boolean`
+     - `Int`
+     - `Long`
+     - `Float`
+    - `Double`
+    - `String`
+- Data classes containing any combination of the above types
+
+2. **Additional Type Support**
+   The library also automatically handles objects containing these advanced types:
+   - `Uri`: Android URI objects
+   - `BigDecimal`: Precise decimal numbers
+   - `Date`: Java Date objects
+   - `Duration`: Kotlin Duration objects
+   - `UUID`: Universally Unique Identifiers
+   - `Pattern`: Regular Expression patterns
+   - `TimeZone`: Java TimeZone objects
+   - `Locale`: Language and region settings
+   - `Calendar`: Java Calendar objects
+
+
 ---
 
 # EncryptionManager
