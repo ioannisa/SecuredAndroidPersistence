@@ -66,30 +66,6 @@ This library offers a wide range of features for securely persisting data, while
 
 ## Installation
 
-There are two ways to install this library to your project
-
-### Option 1: By adding the Module Directly to Your Project
-The `secure-persist` directory contains the core module of this library, while `secure-persist-compose` provides additional functionality for Jetpack Compose state persistence. You can choose to include either or both based on your project's needs.
-
-1. **Copy the Modules**
-    * Copy the `secure-persist` directory from this repository into the root folder of your project.
-    * If you plan to use Jetpack Compose state persistence, also copy the `secure-persist-compose` directory.
-2. **Include the Modules** in `settings.gradle` so android recognize these folders as modules
-```kotlin
-rootProject.name = "My App Name"
-include(":app")
-include(":secure-persist") // Core library for secure data persistence
-include(":secure-persist-compose") // Additional module for Jetpack Compose state persistence
-```
-3. At your App-Module's `build.gradle` file dependencies, add the module that your project contains
-```kotlin
-implementation(project(":secure-persist"))
-implementation(project(":secure-persist-compose")) 
-```
-> **Note:** If your project does not utilize Jetpack Compose, you can omit the `secure-persist-compose` dependency.
-
-### Option 2: Through JitPack Repository
-
 [![](https://jitpack.io/v/ioannisa/SecuredAndroidPersistence.svg)](https://jitpack.io/#ioannisa/secured-android-persist)
 
 1. Add this to your dependencies
