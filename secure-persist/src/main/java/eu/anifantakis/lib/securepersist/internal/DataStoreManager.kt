@@ -36,7 +36,33 @@ private val Context.dataStore by preferencesDataStore("encrypted_datastore")
  */
 class DataStoreManager(context: Context, private val encryptionManager: IEncryptionManager, private val gson: Gson) : SecurePersistSolution{
 
+    companion object {
+        private const val DATASTORE_NAME = "encrypted_datastore"
+    }
+
     private val dataStore = context.dataStore
+
+    init {
+        runBlocking {
+            try {
+                // Try to read any value - if it fails with ClassCastException, we need to clean up
+                dataStore.data.first()
+            } catch (e: Exception) {
+                when {
+                    e is ClassCastException || e.cause is ClassCastException -> {
+                        cleanupDataStore()
+                    }
+                    else -> throw e
+                }
+            }
+        }
+    }
+
+    private suspend fun cleanupDataStore() {
+        dataStore.edit { preferences ->
+            preferences.clear()
+        }
+    }
 
     /**
      * Retrieves a value from DataStore, optionally decrypting it.

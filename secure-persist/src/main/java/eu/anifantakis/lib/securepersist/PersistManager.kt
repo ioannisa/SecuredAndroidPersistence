@@ -6,6 +6,8 @@ import eu.anifantakis.lib.securepersist.encryption.IEncryptionManager
 import eu.anifantakis.lib.securepersist.internal.DataStoreManager
 import eu.anifantakis.lib.securepersist.internal.SharedPreferencesManager
 import eu.anifantakis.lib.securepersist.internal.createGson
+import java.io.File
+import java.security.KeyStore
 import kotlin.reflect.KProperty
 
 interface SecurePersistSolution
@@ -46,9 +48,56 @@ interface EncryptedPreference <T> {
 class PersistManager(context: Context, keyAlias: String = "keyAlias") {
 
     private val gson = createGson()
-    private val encryptionManager: IEncryptionManager = EncryptionManager(context, keyAlias, gson = gson)
-    val sharedPrefs = SharedPreferencesManager(context, gson)
-    val dataStorePrefs = DataStoreManager(context, encryptionManager, gson)
+    private var encryptionManager: IEncryptionManager
+    var sharedPrefs: SharedPreferencesManager
+    var dataStorePrefs: DataStoreManager
+
+    companion object {
+        private fun cleanupAll(context: Context, keyAlias: String) {
+            // Delete SharedPreferences file
+            context.deleteSharedPreferences("encrypted_prefs_filename")
+
+            // Delete DataStore file
+            File(context.filesDir, "datastore/encrypted_datastore").deleteRecursively()
+
+            // Clean KeyStore
+            try {
+                val keyStore = KeyStore.getInstance("AndroidKeyStore")
+                keyStore.load(null)
+                if (keyStore.containsAlias(keyAlias)) {
+                    keyStore.deleteEntry(keyAlias)
+                }
+                if (keyStore.containsAlias("_androidx_security_master_key_")) {
+                    keyStore.deleteEntry("_androidx_security_master_key_")
+                }
+            } catch (e: Exception) {
+                // Log but continue since we're in cleanup
+            }
+        }
+    }
+
+    init {
+        try {
+            encryptionManager = EncryptionManager(context, keyAlias, gson = gson)
+            sharedPrefs = SharedPreferencesManager(context, gson)
+            dataStorePrefs = DataStoreManager(context, encryptionManager, gson)
+        } catch (e: Exception) {
+            when {
+                e is ClassCastException || e.cause is ClassCastException ||
+                        e.toString().contains("VERIFICATION_FAILED") ||
+                        e.toString().contains("KeyStoreException") ||
+                        e.toString().contains("AEADBadTagException") -> {
+                    // Full cleanup
+                    cleanupAll(context, keyAlias)
+                    // Try again
+                    encryptionManager = EncryptionManager(context, keyAlias, gson = gson)
+                    sharedPrefs = SharedPreferencesManager(context, gson)
+                    dataStorePrefs = DataStoreManager(context, encryptionManager, gson)
+                }
+                else -> throw e
+            }
+        }
+    }
 
 
     /**
