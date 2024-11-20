@@ -244,10 +244,30 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
 
     private suspend fun <T> getEncrypted(key: String, defaultValue: T): T {
         val dataKey = stringPreferencesKey(key)
-        val encryptedValue = dataStore.data.map { preferences ->
-            preferences[dataKey]
-        }.first() ?: return defaultValue
-        return encryptionManager.decryptValue(encryptedValue, defaultValue)
+        return try {
+            val encryptedValue = dataStore.data.map { preferences ->
+                preferences[dataKey]
+            }.first()
+
+            when (encryptedValue) {
+                is String -> encryptionManager.decryptValue(encryptedValue, defaultValue)
+                null -> defaultValue
+                else -> {
+                    // If we find a non-string value where we expect an encrypted one,
+                    // clean up and return default
+                    cleanupDataStore()
+                    defaultValue
+                }
+            }
+        } catch (e: Exception) {
+            when {
+                e is ClassCastException || e.cause is ClassCastException -> {
+                    cleanupDataStore()
+                    defaultValue
+                }
+                else -> throw e
+            }
+        }
     }
 
     /**
@@ -284,10 +304,43 @@ class DataStoreManager(context: Context, private val encryptionManager: IEncrypt
         private val encrypted: Boolean = true
     ) : EncryptedPreference<T> {
         override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
-
             val preferenceKey = key?.takeIf { it.isNotEmpty() } ?: property.name
-            val storedValue = getDirect<T>(preferenceKey, defaultValue, encrypted)
-            return storedValue
+
+            return try {
+                if (encrypted) {
+                    // For encrypted values, always use string preferences key
+                    val dataKey = stringPreferencesKey(preferenceKey)
+                    runBlocking {
+                        val encryptedValue = dataStore.data.map { preferences ->
+                            preferences[dataKey]
+                        }.first() ?: return@runBlocking defaultValue
+
+                        // If we got a value, it should be a string when encrypted
+                        if (encryptedValue is String) {
+                            encryptionManager.decryptValue(encryptedValue, defaultValue)
+                        } else {
+                            // If it's not a string, clear it and return default
+                            runBlocking {
+                                cleanupDataStore()
+                            }
+                            defaultValue
+                        }
+                    }
+                } else {
+                    getDirect(preferenceKey, defaultValue, false)
+                }
+            } catch (e: Exception) {
+                when {
+                    e is ClassCastException || e.cause is ClassCastException -> {
+                        // If we get a type mismatch, clean up and return default
+                        runBlocking {
+                            cleanupDataStore()
+                        }
+                        defaultValue
+                    }
+                    else -> throw e
+                }
+            }
         }
 
         override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
