@@ -198,6 +198,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="-1037951443">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-985581730">
           <value>
             <AndroidTestResultsTableState>
@@ -272,6 +285,7 @@
                   <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
                   <entry key="Pixel_9_Pro_XL_API_35" value="120" />
                   <entry key="Tests" value="360" />
+                  <entry key="samsung SM-S928B" value="120" />
                 </map>
               </option>
             </AndroidTestResultsTableState>
@@ -368,6 +382,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="555268152">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="565329097">
           <value>
             <AndroidTestResultsTableState>
@@ -415,6 +442,20 @@
                   <entry key="Duration" value="90" />
                   <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
                   <entry key="Tests" value="360" />
+                  <entry key="samsung SM-S928B" value="120" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="957592273">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
+                  <entry key="Tests" value="360" />
                 </map>
               </option>
             </AndroidTestResultsTableState>
@@ -442,6 +483,7 @@
                   <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
                   <entry key="Pixel_9_Pro_XL_API_35" value="120" />
                   <entry key="Tests" value="360" />
+                  <entry key="samsung SM-S928B" value="120" />
                 </map>
               </option>
             </AndroidTestResultsTableState>
@@ -456,6 +498,7 @@
                   <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
                   <entry key="Pixel_9_Pro_XL_API_35" value="120" />
                   <entry key="Tests" value="360" />
+                  <entry key="samsung SM-S928B" value="120" />
                 </map>
               </option>
             </AndroidTestResultsTableState>
@@ -470,6 +513,7 @@
                   <entry key="Pixel_8_Pro_API_34-ext12" value="120" />
                   <entry key="Pixel_9_Pro_XL_API_35" value="120" />
                   <entry key="Tests" value="360" />
+                  <entry key="samsung SM-S928B" value="120" />
                 </map>
               </option>
             </AndroidTestResultsTableState>

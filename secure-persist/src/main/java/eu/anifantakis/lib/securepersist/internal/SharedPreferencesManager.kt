@@ -2,6 +2,7 @@ package eu.anifantakis.lib.securepersist.internal
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -10,6 +11,7 @@ import com.google.gson.reflect.TypeToken
 import eu.anifantakis.lib.securepersist.EncryptedPreference
 import eu.anifantakis.lib.securepersist.SecurePersistSolution
 import java.lang.reflect.Type
+import java.security.KeyStore
 import kotlin.reflect.KProperty
 
 /**
@@ -23,19 +25,62 @@ import kotlin.reflect.KProperty
  * @param context The application context.
  */
 class SharedPreferencesManager(private val context: Context, private val gson: Gson) : SecurePersistSolution {
-
     private val sharedPreferences: SharedPreferences
 
+    companion object {
+        private const val MASTER_KEY_ALIAS = "_androidx_security_master_key_"
+        private const val PREFS_FILENAME = "encrypted_prefs_filename"
+    }
+
     init {
-        // Create or retrieve the MasterKey for encryption
-        val masterKey = MasterKey.Builder(context)
+        sharedPreferences = try {
+            initializeEncryptedPreferences()
+        } catch (e: Exception) {
+            when {
+                isKeystoreError(e) -> {
+                    // Clean up the KeyStore entry and preferences file
+                    cleanupKeyStore()
+                    context.deleteSharedPreferences(PREFS_FILENAME)
+                    // Try again
+                    initializeEncryptedPreferences()
+                }
+                else -> throw e
+            }
+        }
+    }
+
+    private fun isKeystoreError(e: Exception): Boolean {
+        return e.cause?.toString()?.contains("VERIFICATION_FAILED") == true ||
+                e.toString().contains("KeyStoreException") ||
+                e.cause?.toString()?.contains("KeyStoreException") == true ||
+                e.toString().contains("AEADBadTagException") ||
+                e.cause?.toString()?.contains("AEADBadTagException") == true
+    }
+
+    private fun cleanupKeyStore() {
+        try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+
+            // Remove the master key if exists
+            if (keyStore.containsAlias(MASTER_KEY_ALIAS)) {
+                keyStore.deleteEntry(MASTER_KEY_ALIAS)
+            }
+        } catch (e: Exception) {
+            Log.e("SecurePersist", "KeyStore cleanup failed", e)
+        }
+    }
+
+    private fun initializeEncryptedPreferences(): SharedPreferences {
+        val masterKey = MasterKey.Builder(context, MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .setRequestStrongBoxBacked(false)
+            .setUserAuthenticationRequired(false)
             .build()
 
-        // Initialize EncryptedSharedPreferences
-        sharedPreferences = EncryptedSharedPreferences.create(
+        return EncryptedSharedPreferences.create(
             context,
-            "encrypted_prefs_filename",
+            PREFS_FILENAME,
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
@@ -95,7 +140,6 @@ class SharedPreferencesManager(private val context: Context, private val gson: G
      */
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String, defaultValue: T): T {
-
         return when (defaultValue) {
             is Boolean -> sharedPreferences.getBoolean(key, defaultValue) as T
             is Int ->  sharedPreferences.getInt(key, defaultValue) as T
@@ -155,7 +199,7 @@ class SharedPreferencesManager(private val context: Context, private val gson: G
      *
      * @param defaultValue The default value to be used if no value is stored for the preference.
      * @param key The key for the preference. If null or empty, the property name will be used.
-     * @return An `EncryptedSharedPreference`
+     * @return An `EncryptedPreference`
      */
     inline fun <reified T : Any> preference(defaultValue: T, key: String? = null): EncryptedPreference<T> {
         val type: Type = object : TypeToken<T>() {}.type
