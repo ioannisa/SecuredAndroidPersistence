@@ -70,8 +70,8 @@ This library offers a wide range of features for securely persisting data, while
 
 1. Add this to your dependencies
 ```kotlin
-implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.5.3")
-implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.5.3")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist:2.5.6")
+implementation("com.github.ioannisa.secured-android-persist:secure-persist-compose:2.5.6")
 ```
 
 
